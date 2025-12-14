@@ -1,59 +1,63 @@
-import apiClient from '../client';
+import { apiClient } from '../client';
 import { API_ENDPOINTS } from '../config';
-import type { Semester, PaginatedResponse } from '@/types';
-
-interface SemesterFilters {
-  page?: number;
-  per_page?: number;
-  search?: string;
-  subject_id?: number;
-}
+import type { Semester } from '@/types';
 
 interface SemesterFormData {
-  name: string;
-  subject_id: number;
-  description?: string;
+  country: string;
+  semester_name: string;
+  grade_level: number;
 }
 
 export const semestersService = {
-  // جلب قائمة الفصول الدراسية
-  async getAll(filters?: SemesterFilters): Promise<PaginatedResponse<Semester>> {
-    const response = await apiClient.get<PaginatedResponse<Semester>>(
-      API_ENDPOINTS.DASHBOARD.SEMESTERS.LIST,
-      filters
+  /**
+   * Get all semesters for a country
+   */
+  async getAll(country: string = 'jordan'): Promise<Semester[]> {
+    const response = await apiClient.get<{ data: Semester[] }>(
+      API_ENDPOINTS.SEMESTERS.LIST,
+      { country }
     );
     return response.data;
   },
 
-  // جلب فصل دراسي واحد
-  async getById(id: number | string): Promise<Semester> {
-    const response = await apiClient.get<{ semester: Semester }>(
-      API_ENDPOINTS.DASHBOARD.SEMESTERS.SHOW(id)
+  /**
+   * Get single semester by ID
+   */
+  async getById(id: number | string, country: string = 'jordan'): Promise<Semester> {
+    const response = await apiClient.get<{ data: Semester }>(
+      API_ENDPOINTS.SEMESTERS.SHOW(id),
+      { country }
     );
-    return response.data.semester;
+    return response.data;
   },
 
-  // إنشاء فصل دراسي جديد
+  /**
+   * Create new semester
+   */
   async create(data: SemesterFormData): Promise<Semester> {
-    const response = await apiClient.post<{ semester: Semester }>(
-      API_ENDPOINTS.DASHBOARD.SEMESTERS.STORE,
+    const response = await apiClient.post<{ data: Semester }>(
+      API_ENDPOINTS.SEMESTERS.STORE,
       data
     );
-    return response.data.semester;
+    return response.data;
   },
 
-  // تحديث فصل دراسي
+  /**
+   * Update semester
+   */
   async update(id: number | string, data: SemesterFormData): Promise<Semester> {
-    const response = await apiClient.put<{ semester: Semester }>(
-      API_ENDPOINTS.DASHBOARD.SEMESTERS.UPDATE(id),
+    const response = await apiClient.put<{ data: Semester }>(
+      API_ENDPOINTS.SEMESTERS.UPDATE(id),
       data
     );
-    return response.data.semester;
+    return response.data;
   },
 
-  // حذف فصل دراسي
-  async delete(id: number | string): Promise<void> {
-    await apiClient.delete(API_ENDPOINTS.DASHBOARD.SEMESTERS.DELETE(id));
+  /**
+   * Delete semester
+   */
+  async delete(id: number | string, country: string = 'jordan'): Promise<{ message: string }> {
+    return apiClient.delete(API_ENDPOINTS.SEMESTERS.DELETE(id), { country });
   },
 };
 

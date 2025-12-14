@@ -1,49 +1,90 @@
-import apiClient from '../client';
+import { apiClient } from '../client';
 import { API_ENDPOINTS } from '../config';
 import type { Notification, PaginatedResponse } from '@/types';
 
 interface NotificationFilters {
   page?: number;
   per_page?: number;
-  unread_only?: boolean;
+}
+
+interface NotificationListResponse extends PaginatedResponse<Notification> {
+  unread_count: number;
+}
+
+interface LatestNotificationsResponse {
+  data: Notification[];
+  unread_count: number;
 }
 
 export const notificationsService = {
-  // جلب قائمة الإشعارات
-  async getAll(filters?: NotificationFilters): Promise<PaginatedResponse<Notification>> {
-    const response = await apiClient.get<PaginatedResponse<Notification>>(
-      API_ENDPOINTS.DASHBOARD.NOTIFICATIONS.LIST,
+  /**
+   * Get paginated notifications list
+   */
+  async getAll(filters?: NotificationFilters): Promise<NotificationListResponse> {
+    const response = await apiClient.get<NotificationListResponse>(
+      API_ENDPOINTS.NOTIFICATIONS.LIST,
       filters
     );
-    return response.data;
+    return response;
   },
 
-  // جلب آخر الإشعارات
-  async getLatest(): Promise<{ notifications: Notification[]; unread_count: number }> {
-    const response = await apiClient.get<{ notifications: Notification[]; unread_count: number }>(
-      API_ENDPOINTS.DASHBOARD.NOTIFICATIONS.LATEST
+  /**
+   * Get latest notifications (for navbar bell)
+   */
+  async getLatest(limit: number = 10): Promise<LatestNotificationsResponse> {
+    const response = await apiClient.get<LatestNotificationsResponse>(
+      API_ENDPOINTS.NOTIFICATIONS.LATEST,
+      { limit }
+    );
+    return response;
+  },
+
+  /**
+   * Mark single notification as read
+   */
+  async markAsRead(id: string): Promise<{ message: string; unread_count: number }> {
+    const response = await apiClient.post<{ data: { message: string; unread_count: number } }>(
+      API_ENDPOINTS.NOTIFICATIONS.MARK_READ(id)
     );
     return response.data;
   },
 
-  // وضع علامة مقروء
-  async markAsRead(id: string): Promise<void> {
-    await apiClient.post(API_ENDPOINTS.DASHBOARD.NOTIFICATIONS.READ(id));
+  /**
+   * Mark all notifications as read
+   */
+  async markAllAsRead(): Promise<{ message: string; unread_count: number }> {
+    const response = await apiClient.post<{ data: { message: string; unread_count: number } }>(
+      API_ENDPOINTS.NOTIFICATIONS.MARK_ALL_READ
+    );
+    return response.data;
   },
 
-  // وضع علامة مقروء على الكل
-  async markAllAsRead(): Promise<void> {
-    await apiClient.post(API_ENDPOINTS.DASHBOARD.NOTIFICATIONS.READ_ALL);
+  /**
+   * Bulk action on notifications (delete or mark-as-read)
+   */
+  async bulkAction(ids: string[], action: 'delete' | 'mark-as-read'): Promise<{
+    message: string;
+    deleted?: number;
+    updated?: number;
+    unread_count?: number;
+  }> {
+    const response = await apiClient.post<{ data: {
+      message: string;
+      deleted?: number;
+      updated?: number;
+      unread_count?: number;
+    } }>(
+      API_ENDPOINTS.NOTIFICATIONS.BULK_ACTION,
+      { ids, action }
+    );
+    return response.data;
   },
 
-  // إجراء جماعي
-  async bulkAction(ids: string[], action: 'read' | 'delete'): Promise<void> {
-    await apiClient.post(API_ENDPOINTS.DASHBOARD.NOTIFICATIONS.BULK, { ids, action });
-  },
-
-  // حذف إشعار
-  async delete(id: string): Promise<void> {
-    await apiClient.delete(API_ENDPOINTS.DASHBOARD.NOTIFICATIONS.DELETE(id));
+  /**
+   * Delete a single notification
+   */
+  async delete(id: string): Promise<{ message: string }> {
+    return apiClient.delete(API_ENDPOINTS.NOTIFICATIONS.DELETE(id));
   },
 };
 

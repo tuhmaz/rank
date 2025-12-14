@@ -1,60 +1,88 @@
-import apiClient from '../client';
+import { apiClient } from '../client';
 import { API_ENDPOINTS } from '../config';
-import type { Article, ArticleFormData, PaginatedResponse } from '@/types';
+import type { Article, ArticleFormData, PaginatedResponse, SchoolClass, Subject, Semester } from '@/types';
 
 interface ArticleFilters {
+  country?: string;
   page?: number;
   per_page?: number;
-  search?: string;
-  category_id?: number;
-  class_id?: number;
+  q?: string;
   subject_id?: number;
   semester_id?: number;
-  status?: string;
-  sort_by?: string;
-  sort_order?: 'asc' | 'desc';
+  status?: boolean;
+}
+
+interface ArticleCreateData {
+  country: string;
+  classes: SchoolClass[];
+  subjects: Subject[];
+  semesters: Semester[];
 }
 
 export const articlesService = {
-  // جلب قائمة المقالات
+  /**
+   * Get paginated list of articles
+   */
   async getAll(filters?: ArticleFilters): Promise<PaginatedResponse<Article>> {
     const response = await apiClient.get<PaginatedResponse<Article>>(
-      API_ENDPOINTS.DASHBOARD.ARTICLES.LIST,
+      API_ENDPOINTS.ARTICLES.LIST,
       filters
     );
-    return response.data;
+    return response;
   },
 
-  // جلب بيانات إنشاء مقال جديد (الفئات، الصفوف، إلخ)
-  async getCreateData(): Promise<any> {
-    const response = await apiClient.get(API_ENDPOINTS.DASHBOARD.ARTICLES.CREATE);
-    return response.data;
-  },
-
-  // جلب مقال واحد
-  async getById(id: number | string): Promise<Article> {
-    const response = await apiClient.get<{ article: Article }>(
-      API_ENDPOINTS.DASHBOARD.ARTICLES.SHOW(id)
+  /**
+   * Get data needed for creating an article (classes, subjects, semesters)
+   */
+  async getCreateData(country: string = '1'): Promise<ArticleCreateData> {
+    const response = await apiClient.get<{ data: ArticleCreateData }>(
+      API_ENDPOINTS.ARTICLES.CREATE,
+      { country }
     );
-    return response.data.article;
-  },
-
-  // جلب بيانات تعديل مقال
-  async getEditData(id: number | string): Promise<any> {
-    const response = await apiClient.get(API_ENDPOINTS.DASHBOARD.ARTICLES.EDIT(id));
     return response.data;
   },
 
-  // إنشاء مقال جديد
+  /**
+   * Get single article by ID
+   */
+  async getById(id: number | string, country: string = '1'): Promise<Article> {
+    const response = await apiClient.get<{ data: Article }>(
+      API_ENDPOINTS.ARTICLES.SHOW(id),
+      { country }
+    );
+    return response.data;
+  },
+
+  /**
+   * Get article edit data (article + classes, subjects, semesters)
+   */
+  async getEditData(id: number | string, country: string = '1'): Promise<{
+    data: Article;
+    classes: SchoolClass[];
+    subjects: Subject[];
+    semesters: Semester[];
+  }> {
+    const response = await apiClient.get<{
+      data: Article;
+      classes: SchoolClass[];
+      subjects: Subject[];
+      semesters: Semester[];
+    }>(
+      API_ENDPOINTS.ARTICLES.EDIT(id),
+      { country }
+    );
+    return response;
+  },
+
+  /**
+   * Create new article with file upload support
+   */
   async create(data: ArticleFormData): Promise<Article> {
     const formData = new FormData();
+
     Object.entries(data).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
-        if (key === 'keywords' && Array.isArray(value)) {
-          value.forEach((keyword, index) => {
-            formData.append(`keywords[${index}]`, keyword);
-          });
-        } else if (value instanceof File) {
+        if (value instanceof File) {
           formData.append(key, value);
         } else {
           formData.append(key, String(value));
@@ -62,73 +90,85 @@ export const articlesService = {
       }
     });
 
-    const response = await apiClient.upload<{ article: Article }>(
-      API_ENDPOINTS.DASHBOARD.ARTICLES.STORE,
+    const response = await apiClient.upload<{ data: Article }>(
+      API_ENDPOINTS.ARTICLES.STORE,
       formData
-    );
-    return response.data.article;
-  },
-
-  // تحديث مقال
-  async update(id: number | string, data: ArticleFormData): Promise<Article> {
-    const formData = new FormData();
-    formData.append('_method', 'PUT');
-    Object.entries(data).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        if (key === 'keywords' && Array.isArray(value)) {
-          value.forEach((keyword, index) => {
-            formData.append(`keywords[${index}]`, keyword);
-          });
-        } else if (value instanceof File) {
-          formData.append(key, value);
-        } else {
-          formData.append(key, String(value));
-        }
-      }
-    });
-
-    const response = await apiClient.upload<{ article: Article }>(
-      API_ENDPOINTS.DASHBOARD.ARTICLES.UPDATE(id),
-      formData
-    );
-    return response.data.article;
-  },
-
-  // حذف مقال
-  async delete(id: number | string): Promise<void> {
-    await apiClient.delete(API_ENDPOINTS.DASHBOARD.ARTICLES.DELETE(id));
-  },
-
-  // نشر مقال
-  async publish(id: number | string): Promise<Article> {
-    const response = await apiClient.post<{ article: Article }>(
-      API_ENDPOINTS.DASHBOARD.ARTICLES.PUBLISH(id)
-    );
-    return response.data.article;
-  },
-
-  // إلغاء نشر مقال
-  async unpublish(id: number | string): Promise<Article> {
-    const response = await apiClient.post<{ article: Article }>(
-      API_ENDPOINTS.DASHBOARD.ARTICLES.UNPUBLISH(id)
-    );
-    return response.data.article;
-  },
-
-  // جلب مقالات حسب الصف
-  async getByClass(gradeLevel: string, filters?: ArticleFilters): Promise<PaginatedResponse<Article>> {
-    const response = await apiClient.get<PaginatedResponse<Article>>(
-      API_ENDPOINTS.DASHBOARD.ARTICLES.BY_CLASS(gradeLevel),
-      filters
     );
     return response.data;
   },
 
-  // جلب مقالات حسب الكلمة المفتاحية
-  async getByKeyword(keyword: string, filters?: ArticleFilters): Promise<PaginatedResponse<Article>> {
-    const response = await apiClient.get<PaginatedResponse<Article>>(
-      API_ENDPOINTS.DASHBOARD.ARTICLES.BY_KEYWORD(keyword),
-      filters
+  /**
+   * Update existing article
+   */
+  async update(id: number | string, data: Partial<ArticleFormData>): Promise<Article> {
+    const formData = new FormData();
+    formData.append('_method', 'PUT');
+
+    Object.entries(data).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        if (value instanceof File) {
+          // new_file for updating the attachment
+          formData.append(key === 'file' ? 'new_file' : key, value);
+        } else {
+          formData.append(key, String(value));
+        }
+      }
+    });
+
+    const response = await apiClient.upload<{ data: Article }>(
+      API_ENDPOINTS.ARTICLES.UPDATE(id),
+      formData
+    );
+    return response.data;
+  },
+
+  /**
+   * Delete article
+   */
+  async delete(id: number | string, country: string = '1'): Promise<{ message: string }> {
+    return apiClient.delete(API_ENDPOINTS.ARTICLES.DELETE(id), { country });
+  },
+
+  /**
+   * Get articles by class/grade level
+   */
+  async getByClass(gradeLevel: number | string, country: string = '1'): Promise<Article[]> {
+    const response = await apiClient.get<{ data: Article[] }>(
+      API_ENDPOINTS.ARTICLES.BY_CLASS(gradeLevel),
+      { country }
+    );
+    return response.data;
+  },
+
+  /**
+   * Get articles by keyword
+   */
+  async getByKeyword(keyword: string, country: string = '1'): Promise<Article[]> {
+    const response = await apiClient.get<{ data: Article[] }>(
+      API_ENDPOINTS.ARTICLES.BY_KEYWORD(keyword),
+      { country }
+    );
+    return response.data;
+  },
+
+  /**
+   * Publish article
+   */
+  async publish(id: number | string, country: string = '1'): Promise<Article> {
+    const response = await apiClient.post<{ data: Article }>(
+      API_ENDPOINTS.ARTICLES.PUBLISH(id),
+      { country }
+    );
+    return response.data;
+  },
+
+  /**
+   * Unpublish article
+   */
+  async unpublish(id: number | string, country: string = '1'): Promise<Article> {
+    const response = await apiClient.post<{ data: Article }>(
+      API_ENDPOINTS.ARTICLES.UNPUBLISH(id),
+      { country }
     );
     return response.data;
   },

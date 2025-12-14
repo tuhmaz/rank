@@ -1,58 +1,63 @@
-import apiClient from '../client';
+import { apiClient } from '../client';
 import { API_ENDPOINTS } from '../config';
-import type { SchoolClass, PaginatedResponse } from '@/types';
-
-interface SchoolClassFilters {
-  page?: number;
-  per_page?: number;
-  search?: string;
-}
+import type { SchoolClass } from '@/types';
 
 interface SchoolClassFormData {
-  name: string;
-  grade_level: string;
-  description?: string;
+  country_id: string;
+  grade_name: string;
+  grade_level: number;
 }
 
 export const schoolClassesService = {
-  // جلب قائمة الصفوف
-  async getAll(filters?: SchoolClassFilters): Promise<PaginatedResponse<SchoolClass>> {
-    const response = await apiClient.get<PaginatedResponse<SchoolClass>>(
-      API_ENDPOINTS.DASHBOARD.SCHOOL_CLASSES.LIST,
-      filters
+  /**
+   * Get all school classes for a country
+   */
+  async getAll(country_id: string = '1'): Promise<SchoolClass[]> {
+    const response = await apiClient.get<{ data: SchoolClass[] }>(
+      API_ENDPOINTS.SCHOOL_CLASSES.LIST,
+      { country_id }
     );
     return response.data;
   },
 
-  // جلب صف واحد
-  async getById(id: number | string): Promise<SchoolClass> {
-    const response = await apiClient.get<{ school_class: SchoolClass }>(
-      API_ENDPOINTS.DASHBOARD.SCHOOL_CLASSES.SHOW(id)
+  /**
+   * Get single school class by ID
+   */
+  async getById(id: number | string, country_id: string = '1'): Promise<SchoolClass> {
+    const response = await apiClient.get<{ data: SchoolClass }>(
+      API_ENDPOINTS.SCHOOL_CLASSES.SHOW(id),
+      { country_id }
     );
-    return response.data.school_class;
+    return response.data;
   },
 
-  // إنشاء صف جديد
+  /**
+   * Create new school class
+   */
   async create(data: SchoolClassFormData): Promise<SchoolClass> {
-    const response = await apiClient.post<{ school_class: SchoolClass }>(
-      API_ENDPOINTS.DASHBOARD.SCHOOL_CLASSES.STORE,
+    const response = await apiClient.post<{ data: SchoolClass }>(
+      API_ENDPOINTS.SCHOOL_CLASSES.STORE,
       data
     );
-    return response.data.school_class;
+    return response.data;
   },
 
-  // تحديث صف
+  /**
+   * Update school class
+   */
   async update(id: number | string, data: SchoolClassFormData): Promise<SchoolClass> {
-    const response = await apiClient.put<{ school_class: SchoolClass }>(
-      API_ENDPOINTS.DASHBOARD.SCHOOL_CLASSES.UPDATE(id),
+    const response = await apiClient.put<{ data: SchoolClass }>(
+      API_ENDPOINTS.SCHOOL_CLASSES.UPDATE(id),
       data
     );
-    return response.data.school_class;
+    return response.data;
   },
 
-  // حذف صف
-  async delete(id: number | string): Promise<void> {
-    await apiClient.delete(API_ENDPOINTS.DASHBOARD.SCHOOL_CLASSES.DELETE(id));
+  /**
+   * Delete school class
+   */
+  async delete(id: number | string, country_id: string = '1'): Promise<{ message: string }> {
+    return apiClient.delete(API_ENDPOINTS.SCHOOL_CLASSES.DELETE(id), { country_id });
   },
 };
 

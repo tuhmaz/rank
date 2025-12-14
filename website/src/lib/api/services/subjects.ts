@@ -1,59 +1,63 @@
-import apiClient from '../client';
+import { apiClient } from '../client';
 import { API_ENDPOINTS } from '../config';
-import type { Subject, PaginatedResponse } from '@/types';
-
-interface SubjectFilters {
-  page?: number;
-  per_page?: number;
-  search?: string;
-  class_id?: number;
-}
+import type { Subject } from '@/types';
 
 interface SubjectFormData {
-  name: string;
-  class_id: number;
-  description?: string;
+  country: string;
+  subject_name: string;
+  grade_level: number;
 }
 
 export const subjectsService = {
-  // جلب قائمة المواد
-  async getAll(filters?: SubjectFilters): Promise<PaginatedResponse<Subject>> {
-    const response = await apiClient.get<PaginatedResponse<Subject>>(
-      API_ENDPOINTS.DASHBOARD.SUBJECTS.LIST,
-      filters
+  /**
+   * Get all subjects for a country
+   */
+  async getAll(country: string = 'jordan'): Promise<Subject[]> {
+    const response = await apiClient.get<{ data: Subject[] }>(
+      API_ENDPOINTS.SUBJECTS.LIST,
+      { country }
     );
     return response.data;
   },
 
-  // جلب مادة واحدة
-  async getById(id: number | string): Promise<Subject> {
-    const response = await apiClient.get<{ subject: Subject }>(
-      API_ENDPOINTS.DASHBOARD.SUBJECTS.SHOW(id)
+  /**
+   * Get single subject by ID
+   */
+  async getById(id: number | string, country: string = 'jordan'): Promise<Subject> {
+    const response = await apiClient.get<{ data: Subject }>(
+      API_ENDPOINTS.SUBJECTS.SHOW(id),
+      { country }
     );
-    return response.data.subject;
+    return response.data;
   },
 
-  // إنشاء مادة جديدة
+  /**
+   * Create new subject
+   */
   async create(data: SubjectFormData): Promise<Subject> {
-    const response = await apiClient.post<{ subject: Subject }>(
-      API_ENDPOINTS.DASHBOARD.SUBJECTS.STORE,
+    const response = await apiClient.post<{ data: Subject }>(
+      API_ENDPOINTS.SUBJECTS.STORE,
       data
     );
-    return response.data.subject;
+    return response.data;
   },
 
-  // تحديث مادة
+  /**
+   * Update subject
+   */
   async update(id: number | string, data: SubjectFormData): Promise<Subject> {
-    const response = await apiClient.put<{ subject: Subject }>(
-      API_ENDPOINTS.DASHBOARD.SUBJECTS.UPDATE(id),
+    const response = await apiClient.put<{ data: Subject }>(
+      API_ENDPOINTS.SUBJECTS.UPDATE(id),
       data
     );
-    return response.data.subject;
+    return response.data;
   },
 
-  // حذف مادة
-  async delete(id: number | string): Promise<void> {
-    await apiClient.delete(API_ENDPOINTS.DASHBOARD.SUBJECTS.DELETE(id));
+  /**
+   * Delete subject
+   */
+  async delete(id: number | string, country: string = 'jordan'): Promise<{ message: string }> {
+    return apiClient.delete(API_ENDPOINTS.SUBJECTS.DELETE(id), { country });
   },
 };
 

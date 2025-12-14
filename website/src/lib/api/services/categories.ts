@@ -1,8 +1,9 @@
-import apiClient from '../client';
+import { apiClient } from '../client';
 import { API_ENDPOINTS } from '../config';
 import type { Category, PaginatedResponse } from '@/types';
 
 interface CategoryFilters {
+  country?: string;
   page?: number;
   per_page?: number;
   search?: string;
@@ -10,6 +11,7 @@ interface CategoryFilters {
 }
 
 interface CategoryFormData {
+  country: string;
   name: string;
   description?: string;
   parent_id?: number;
@@ -18,24 +20,31 @@ interface CategoryFormData {
 }
 
 export const categoriesService = {
-  // جلب قائمة الفئات
+  /**
+   * Get all categories with optional filters
+   */
   async getAll(filters?: CategoryFilters): Promise<PaginatedResponse<Category>> {
     const response = await apiClient.get<PaginatedResponse<Category>>(
-      API_ENDPOINTS.DASHBOARD.CATEGORIES.LIST,
+      API_ENDPOINTS.CATEGORIES.LIST,
       filters
+    );
+    return response;
+  },
+
+  /**
+   * Get single category by ID
+   */
+  async getById(id: number | string, country: string = '1'): Promise<Category> {
+    const response = await apiClient.get<{ data: Category }>(
+      API_ENDPOINTS.CATEGORIES.SHOW(id),
+      { country }
     );
     return response.data;
   },
 
-  // جلب فئة واحدة
-  async getById(id: number | string): Promise<Category> {
-    const response = await apiClient.get<{ category: Category }>(
-      API_ENDPOINTS.DASHBOARD.CATEGORIES.SHOW(id)
-    );
-    return response.data.category;
-  },
-
-  // إنشاء فئة جديدة
+  /**
+   * Create new category
+   */
   async create(data: CategoryFormData): Promise<Category> {
     const formData = new FormData();
     Object.entries(data).forEach(([key, value]) => {
@@ -48,16 +57,20 @@ export const categoriesService = {
       }
     });
 
-    const response = await apiClient.upload<{ category: Category }>(
-      API_ENDPOINTS.DASHBOARD.CATEGORIES.STORE,
+    const response = await apiClient.upload<{ data: Category }>(
+      API_ENDPOINTS.CATEGORIES.STORE,
       formData
     );
-    return response.data.category;
+    return response.data;
   },
 
-  // تحديث فئة
-  async update(id: number | string, data: CategoryFormData): Promise<Category> {
+  /**
+   * Update existing category
+   */
+  async update(id: number | string, data: Partial<CategoryFormData>): Promise<Category> {
     const formData = new FormData();
+    formData.append('_method', 'PUT');
+
     Object.entries(data).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
         if (value instanceof File) {
@@ -68,24 +81,29 @@ export const categoriesService = {
       }
     });
 
-    const response = await apiClient.upload<{ category: Category }>(
-      API_ENDPOINTS.DASHBOARD.CATEGORIES.UPDATE(id),
+    const response = await apiClient.upload<{ data: Category }>(
+      API_ENDPOINTS.CATEGORIES.UPDATE(id),
       formData
     );
-    return response.data.category;
+    return response.data;
   },
 
-  // حذف فئة
-  async delete(id: number | string): Promise<void> {
-    await apiClient.delete(API_ENDPOINTS.DASHBOARD.CATEGORIES.DELETE(id));
+  /**
+   * Delete category
+   */
+  async delete(id: number | string, country: string = '1'): Promise<{ message: string }> {
+    return apiClient.delete(API_ENDPOINTS.CATEGORIES.DELETE(id), { country });
   },
 
-  // تبديل حالة الفئة
-  async toggleStatus(id: number | string): Promise<Category> {
-    const response = await apiClient.post<{ category: Category }>(
-      API_ENDPOINTS.DASHBOARD.CATEGORIES.TOGGLE(id)
+  /**
+   * Toggle category active status
+   */
+  async toggle(id: number | string, country: string = '1'): Promise<Category> {
+    const response = await apiClient.post<{ data: Category }>(
+      API_ENDPOINTS.CATEGORIES.TOGGLE(id),
+      { country }
     );
-    return response.data.category;
+    return response.data;
   },
 };
 

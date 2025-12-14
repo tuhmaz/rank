@@ -1,4 +1,4 @@
-// تصدير جميع خدمات API
+// Export all API services
 export { default as authService } from './auth';
 export { default as dashboardService } from './dashboard';
 export { default as articlesService } from './articles';
@@ -10,7 +10,13 @@ export { default as semestersService } from './semesters';
 export { default as securityService } from './security';
 export { default as notificationsService } from './notifications';
 export { default as messagesService } from './messages';
+export { default as rolesService } from './roles';
+export { default as calendarService } from './calendar';
+export { default as filesService } from './files';
+export { default as postsService } from './posts';
+export { default as settingsService } from './settings';
 
-// تصدير العميل والتكوين
-export { default as apiClient } from '../client';
-export { API_ENDPOINTS, API_CONFIG } from '../config';
+// Export API client and config
+export { apiClient } from '../client';
+export { API_ENDPOINTS, API_CONFIG, COUNTRIES } from '../config';
+export type { CountryId, CountryCode } from '../config';

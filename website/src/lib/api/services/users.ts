@@ -1,91 +1,117 @@
-import apiClient from '../client';
+import { apiClient } from '../client';
 import { API_ENDPOINTS } from '../config';
-import type { User, PaginatedResponse, Role } from '@/types';
+import type { User, Role, Permission } from '@/types';
 
 interface UserFilters {
-  page?: number;
-  per_page?: number;
-  search?: string;
   role?: string;
-  status?: string;
-  sort_by?: string;
-  sort_order?: 'asc' | 'desc';
+  search?: string;
 }
 
 interface CreateUserData {
   name: string;
   email: string;
   password: string;
-  password_confirmation: string;
-  role?: string;
-  roles?: number[];
+  role: string;
 }
 
 interface UpdateUserData {
   name?: string;
   email?: string;
-  password?: string;
-  password_confirmation?: string;
-  role?: string;
-  roles?: number[];
-  status?: string;
+  profile_photo?: File;
 }
 
 export const usersService = {
-  // جلب قائمة المستخدمين
-  async getAll(filters?: UserFilters): Promise<PaginatedResponse<User>> {
-    const response = await apiClient.get<PaginatedResponse<User>>(
-      API_ENDPOINTS.DASHBOARD.USERS.LIST,
+  /**
+   * Get all users with optional filters
+   */
+  async getAll(filters?: UserFilters): Promise<User[]> {
+    const response = await apiClient.get<{ data: User[] }>(
+      API_ENDPOINTS.USERS.LIST,
       filters
     );
     return response.data;
   },
 
-  // جلب بيانات إنشاء مستخدم (الأدوار المتاحة)
-  async getCreateData(): Promise<{ roles: Role[] }> {
-    const response = await apiClient.get<{ roles: Role[] }>(
-      API_ENDPOINTS.DASHBOARD.USERS.CREATE
-    );
-    return response.data;
-  },
-
-  // جلب مستخدم واحد
+  /**
+   * Get single user by ID
+   */
   async getById(id: number | string): Promise<User> {
-    const response = await apiClient.get<{ user: User }>(
-      API_ENDPOINTS.DASHBOARD.USERS.SHOW(id)
-    );
-    return response.data.user;
-  },
-
-  // جلب بيانات تعديل مستخدم
-  async getEditData(id: number | string): Promise<{ user: User; roles: Role[] }> {
-    const response = await apiClient.get<{ user: User; roles: Role[] }>(
-      API_ENDPOINTS.DASHBOARD.USERS.EDIT(id)
+    const response = await apiClient.get<{ data: User }>(
+      API_ENDPOINTS.USERS.SHOW(id)
     );
     return response.data;
   },
 
-  // إنشاء مستخدم جديد
+  /**
+   * Create new user
+   */
   async create(data: CreateUserData): Promise<User> {
-    const response = await apiClient.post<{ user: User }>(
-      API_ENDPOINTS.DASHBOARD.USERS.STORE,
+    const response = await apiClient.post<{ data: User }>(
+      API_ENDPOINTS.USERS.STORE,
       data
     );
-    return response.data.user;
+    return response.data;
   },
 
-  // تحديث مستخدم
+  /**
+   * Update user (with optional profile photo upload)
+   */
   async update(id: number | string, data: UpdateUserData): Promise<User> {
-    const response = await apiClient.put<{ user: User }>(
-      API_ENDPOINTS.DASHBOARD.USERS.UPDATE(id),
+    if (data.profile_photo) {
+      const formData = new FormData();
+      Object.entries(data).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          if (value instanceof File) {
+            formData.append(key, value);
+          } else {
+            formData.append(key, String(value));
+          }
+        }
+      });
+      const response = await apiClient.upload<{ data: User }>(
+        API_ENDPOINTS.USERS.UPDATE(id),
+        formData
+      );
+      return response.data;
+    }
+
+    const response = await apiClient.put<{ data: User }>(
+      API_ENDPOINTS.USERS.UPDATE(id),
       data
     );
-    return response.data.user;
+    return response.data;
   },
 
-  // حذف مستخدم
-  async delete(id: number | string): Promise<void> {
-    await apiClient.delete(API_ENDPOINTS.DASHBOARD.USERS.DELETE(id));
+  /**
+   * Update user roles and permissions
+   */
+  async updateRolesPermissions(
+    id: number | string,
+    data: { roles?: string[]; permissions?: string[] }
+  ): Promise<User> {
+    const response = await apiClient.put<{ data: User }>(
+      API_ENDPOINTS.USERS.UPDATE_ROLES(id),
+      data
+    );
+    return response.data;
+  },
+
+  /**
+   * Delete user
+   */
+  async delete(id: number | string): Promise<{ message: string }> {
+    return apiClient.delete(API_ENDPOINTS.USERS.DELETE(id));
+  },
+
+  /**
+   * Bulk delete users
+   */
+  async bulkDelete(userIds: number[]): Promise<{ deleted: number; errors: string[] }> {
+    const response = await apiClient.post<{ data: { deleted: number; errors: string[] } }>(
+      API_ENDPOINTS.USERS.BULK_DELETE,
+      { user_ids: userIds }
+    );
+    return response.data;
   },
 };
 

@@ -1,12 +1,6 @@
-import apiClient from '../client';
+import { apiClient } from '../client';
 import { API_ENDPOINTS } from '../config';
 import type { Message, PaginatedResponse } from '@/types';
-
-interface MessageFilters {
-  page?: number;
-  per_page?: number;
-  search?: string;
-}
 
 interface SendMessageData {
   recipient_id: number;
@@ -14,76 +8,97 @@ interface SendMessageData {
   body: string;
 }
 
+interface SaveDraftData {
+  recipient_id: number;
+  subject?: string;
+  body?: string;
+}
+
 export const messagesService = {
-  // جلب البريد الوارد
-  async getInbox(filters?: MessageFilters): Promise<PaginatedResponse<Message>> {
+  /**
+   * Get inbox messages
+   */
+  async getInbox(): Promise<PaginatedResponse<Message>> {
     const response = await apiClient.get<PaginatedResponse<Message>>(
-      API_ENDPOINTS.DASHBOARD.MESSAGES.INBOX,
-      filters
+      API_ENDPOINTS.MESSAGES.INBOX
     );
-    return response.data;
+    return response;
   },
 
-  // جلب البريد المرسل
-  async getSent(filters?: MessageFilters): Promise<PaginatedResponse<Message>> {
+  /**
+   * Get sent messages
+   */
+  async getSent(): Promise<PaginatedResponse<Message>> {
     const response = await apiClient.get<PaginatedResponse<Message>>(
-      API_ENDPOINTS.DASHBOARD.MESSAGES.SENT,
-      filters
+      API_ENDPOINTS.MESSAGES.SENT
     );
-    return response.data;
+    return response;
   },
 
-  // جلب المسودات
-  async getDrafts(filters?: MessageFilters): Promise<PaginatedResponse<Message>> {
+  /**
+   * Get draft messages
+   */
+  async getDrafts(): Promise<PaginatedResponse<Message>> {
     const response = await apiClient.get<PaginatedResponse<Message>>(
-      API_ENDPOINTS.DASHBOARD.MESSAGES.DRAFTS,
-      filters
+      API_ENDPOINTS.MESSAGES.DRAFTS
     );
-    return response.data;
+    return response;
   },
 
-  // إرسال رسالة
+  /**
+   * Send a new message
+   */
   async send(data: SendMessageData): Promise<Message> {
-    const response = await apiClient.post<{ message: Message }>(
-      API_ENDPOINTS.DASHBOARD.MESSAGES.SEND,
+    const response = await apiClient.post<{ data: Message }>(
+      API_ENDPOINTS.MESSAGES.SEND,
       data
     );
-    return response.data.message;
+    return response.data;
   },
 
-  // حفظ كمسودة
-  async saveDraft(data: Partial<SendMessageData>): Promise<Message> {
-    const response = await apiClient.post<{ message: Message }>(
-      API_ENDPOINTS.DASHBOARD.MESSAGES.DRAFT,
+  /**
+   * Save message as draft
+   */
+  async saveDraft(data: SaveDraftData): Promise<Message> {
+    const response = await apiClient.post<{ data: Message }>(
+      API_ENDPOINTS.MESSAGES.SAVE_DRAFT,
       data
     );
-    return response.data.message;
+    return response.data;
   },
 
-  // جلب رسالة واحدة
+  /**
+   * Get a single message by ID
+   */
   async getById(id: number | string): Promise<Message> {
-    const response = await apiClient.get<{ message: Message }>(
-      API_ENDPOINTS.DASHBOARD.MESSAGES.SHOW(id)
+    const response = await apiClient.get<{ data: Message }>(
+      API_ENDPOINTS.MESSAGES.SHOW(id)
     );
-    return response.data.message;
+    return response.data;
   },
 
-  // وضع علامة مقروء
+  /**
+   * Mark message as read
+   */
   async markAsRead(id: number | string): Promise<void> {
-    await apiClient.post(API_ENDPOINTS.DASHBOARD.MESSAGES.READ(id));
+    await apiClient.post(API_ENDPOINTS.MESSAGES.MARK_READ(id));
   },
 
-  // تبديل علامة مهم
-  async toggleImportant(id: number | string): Promise<Message> {
-    const response = await apiClient.post<{ message: Message }>(
-      API_ENDPOINTS.DASHBOARD.MESSAGES.IMPORTANT(id)
+  /**
+   * Toggle message important status
+   */
+  async toggleImportant(id: number | string): Promise<{ important: boolean }> {
+    const response = await apiClient.post<{ data: { important: boolean } }>(
+      API_ENDPOINTS.MESSAGES.TOGGLE_IMPORTANT(id)
     );
-    return response.data.message;
+    return response.data;
   },
 
-  // حذف رسالة
-  async delete(id: number | string): Promise<void> {
-    await apiClient.delete(API_ENDPOINTS.DASHBOARD.MESSAGES.DELETE(id));
+  /**
+   * Delete a message
+   */
+  async delete(id: number | string): Promise<{ message: string }> {
+    return apiClient.delete(API_ENDPOINTS.MESSAGES.DELETE(id));
   },
 };
 
