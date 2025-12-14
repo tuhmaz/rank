@@ -8,6 +8,7 @@ use App\Services\SecurityLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Response;
 use Carbon\Carbon;
 use App\Http\Resources\BaseResource;
 use App\Http\Resources\Api\SecurityLogResource;
@@ -197,6 +198,67 @@ class SecurityLogApiController extends Controller
         SecurityLog::truncate();
 
         return new BaseResource(['message' => 'All logs deleted']);
+    }
+
+    public function export(Request $request)
+    {
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="security-logs.csv"',
+            'Pragma' => 'no-cache',
+            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires' => '0'
+        ];
+
+        $logs = SecurityLog::with('user')
+            ->when($request->event_type, fn($q) => $q->where('event_type', $request->event_type))
+            ->when($request->severity, fn($q) => $q->where('severity', $request->severity))
+            ->when($request->is_resolved, fn($q) => $q->where('is_resolved', $request->is_resolved === 'true'))
+            ->latest()
+            ->get();
+
+        $callback = function () use ($logs) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, [
+                'ID',
+                'Time',
+                'IP Address',
+                'Event Type',
+                'Description',
+                'User',
+                'Route',
+                'Severity',
+                'Status',
+                'Risk Score',
+                'Country',
+                'City',
+                'Attack Type',
+                'Occurrences'
+            ]);
+
+            foreach ($logs as $log) {
+                fputcsv($file, [
+                    $log->id,
+                    $log->created_at,
+                    $log->ip_address,
+                    $log->event_type,
+                    $log->description,
+                    $log->user ? $log->user->name : 'System',
+                    $log->route,
+                    $log->severity,
+                    $log->is_resolved ? 'Resolved' : 'Pending',
+                    $log->risk_score,
+                    $log->country_code,
+                    $log->city,
+                    $log->attack_type,
+                    $log->occurrence_count
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return Response::stream($callback, 200, $headers);
     }
 
     /**

@@ -225,6 +225,8 @@ Route::middleware('auth:sanctum')->prefix('dashboard')->group(function () {
         // ---------------------------
         Route::delete('/logs', [SecurityLogApiController::class, 'destroyAll']);
 
+        Route::get('/export', [SecurityLogApiController::class, 'export']);
+
         // ---------------------------
         // Analytics endpoints
         // ---------------------------
