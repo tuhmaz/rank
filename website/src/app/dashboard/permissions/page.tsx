@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Plus, Search, Edit, Trash2, Key, Shield } from 'lucide-react';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -10,28 +10,9 @@ import Modal from '@/components/ui/Modal';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import type { Permission } from '@/types';
+import { rolesService } from '@/lib/api/services';
 
-const mockPermissions: Permission[] = [
-  { id: 1, name: 'users.view', display_name: 'عرض المستخدمين', group: 'المستخدمون' },
-  { id: 2, name: 'users.create', display_name: 'إضافة مستخدم', group: 'المستخدمون' },
-  { id: 3, name: 'users.edit', display_name: 'تعديل مستخدم', group: 'المستخدمون' },
-  { id: 4, name: 'users.delete', display_name: 'حذف مستخدم', group: 'المستخدمون' },
-  { id: 5, name: 'articles.view', display_name: 'عرض المقالات', group: 'المقالات' },
-  { id: 6, name: 'articles.create', display_name: 'إضافة مقال', group: 'المقالات' },
-  { id: 7, name: 'articles.edit', display_name: 'تعديل مقال', group: 'المقالات' },
-  { id: 8, name: 'articles.delete', display_name: 'حذف مقال', group: 'المقالات' },
-  { id: 9, name: 'articles.publish', display_name: 'نشر مقال', group: 'المقالات' },
-  { id: 10, name: 'categories.view', display_name: 'عرض الفئات', group: 'الفئات' },
-  { id: 11, name: 'categories.create', display_name: 'إضافة فئة', group: 'الفئات' },
-  { id: 12, name: 'categories.edit', display_name: 'تعديل فئة', group: 'الفئات' },
-  { id: 13, name: 'categories.delete', display_name: 'حذف فئة', group: 'الفئات' },
-  { id: 14, name: 'settings.view', display_name: 'عرض الإعدادات', group: 'الإعدادات' },
-  { id: 15, name: 'settings.edit', display_name: 'تعديل الإعدادات', group: 'الإعدادات' },
-  { id: 16, name: 'roles.view', display_name: 'عرض الأدوار', group: 'الصلاحيات' },
-  { id: 17, name: 'roles.create', display_name: 'إضافة دور', group: 'الصلاحيات' },
-  { id: 18, name: 'roles.edit', display_name: 'تعديل دور', group: 'الصلاحيات' },
-  { id: 19, name: 'roles.delete', display_name: 'حذف دور', group: 'الصلاحيات' },
-];
+type UIPermission = Permission & { display_name?: string; group?: string };
 
 const groupOptions = [
   { value: 'المستخدمون', label: 'المستخدمون' },
@@ -51,7 +32,7 @@ const groupColors: Record<string, 'info' | 'success' | 'warning' | 'error'> = {
 };
 
 export default function PermissionsPage() {
-  const [permissions, setPermissions] = useState<Permission[]>(mockPermissions);
+  const [permissions, setPermissions] = useState<UIPermission[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterGroup, setFilterGroup] = useState('');
@@ -62,16 +43,75 @@ export default function PermissionsPage() {
   });
   const [formData, setFormData] = useState({
     name: '',
-    display_name: '',
-    group: '',
+    guard_name: 'web',
   });
+  const [actionLoading, setActionLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const toGroupLabel = (key: string) => {
+    switch (key) {
+      case 'users': return 'المستخدمون';
+      case 'articles': return 'المقالات';
+      case 'categories': return 'الفئات';
+      case 'settings': return 'الإعدادات';
+      case 'roles': return 'الصلاحيات';
+      default: return 'أخرى';
+    }
+  };
+
+  const toActionLabel = (key: string) => {
+    switch (key) {
+      case 'view': return 'عرض';
+      case 'create': return 'إضافة';
+      case 'edit': return 'تعديل';
+      case 'delete': return 'حذف';
+      case 'publish': return 'نشر';
+      default: return key || '';
+    }
+  };
+
+  const makeDisplayName = (name: string) => {
+    const [g, a] = (name || '').split('.');
+    const gl = toGroupLabel(g || '');
+    const al = toActionLabel(a || '');
+    return gl && al ? `${al} ${gl}` : name;
+  };
+
+  const transformPermissions = (list: Permission[]): UIPermission[] => {
+    return (Array.isArray(list) ? list : []).map((p) => {
+      const [g] = (p.name || '').split('.');
+      const gl = toGroupLabel(g || '');
+      return {
+        ...p,
+        group: gl,
+        display_name: makeDisplayName(p.name),
+      };
+    });
+  };
+
+  const loadPermissions = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const list = await rolesService.getPermissions();
+      setPermissions(transformPermissions(list));
+    } catch (e: any) {
+      setError(e?.message || 'فشل في تحميل الصلاحيات');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadPermissions();
+  }, []);
 
   const columns = [
     {
       key: 'display_name',
       title: 'الصلاحية',
       sortable: true,
-      render: (value: string, item: Permission) => (
+      render: (value: string, item: UIPermission) => (
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
             <Key className="w-5 h-5 text-accent" />
@@ -94,7 +134,7 @@ export default function PermissionsPage() {
     {
       key: 'actions',
       title: 'الإجراءات',
-      render: (_: any, item: Permission) => (
+      render: (_: any, item: UIPermission) => (
         <div className="flex items-center gap-1">
           <button
             onClick={() => openEditModal(item)}
@@ -113,46 +153,56 @@ export default function PermissionsPage() {
     },
   ];
 
-  const openEditModal = (permission: Permission) => {
+  const openEditModal = (permission: UIPermission) => {
     setFormData({
       name: permission.name,
-      display_name: permission.display_name,
-      group: permission.group || '',
+      guard_name: (permission.guard_name as string) || 'web',
     });
     setModal({ open: true, mode: 'edit', permission });
   };
 
   const openCreateModal = () => {
-    setFormData({ name: '', display_name: '', group: '' });
+    setFormData({ name: '', guard_name: 'web' });
     setModal({ open: true, mode: 'create', permission: null });
   };
 
-  const handleSubmit = () => {
-    if (modal.mode === 'create') {
-      const newPermission: Permission = {
-        id: Date.now(),
-        name: formData.name,
-        display_name: formData.display_name,
-        group: formData.group,
-      };
-      setPermissions([...permissions, newPermission]);
-    } else if (modal.permission) {
-      setPermissions(permissions.map(p =>
-        p.id === modal.permission?.id ? { ...p, ...formData } : p
-      ));
+  const handleSubmit = async () => {
+    try {
+      setActionLoading(true);
+      setError(null);
+      const payload = { name: formData.name, guard_name: formData.guard_name };
+      if (modal.mode === 'create') {
+        await rolesService.createPermission(payload);
+      } else if (modal.permission) {
+        await rolesService.updatePermission(modal.permission.id, payload);
+      }
+      setModal({ open: false, mode: 'create', permission: null });
+      await loadPermissions();
+    } catch (e: any) {
+      setError(e?.message || 'فشل تنفيذ العملية');
+    } finally {
+      setActionLoading(false);
     }
-    setModal({ open: false, mode: 'create', permission: null });
   };
 
-  const handleDelete = (id: number) => {
-    if (confirm('هل أنت متأكد من حذف هذه الصلاحية؟')) {
-      setPermissions(permissions.filter(p => p.id !== id));
+  const handleDelete = async (id: number) => {
+    const ok = confirm('هل أنت متأكد من حذف هذه الصلاحية؟');
+    if (!ok) return;
+    try {
+      setActionLoading(true);
+      setError(null);
+      await rolesService.deletePermission(id);
+      await loadPermissions();
+    } catch (e: any) {
+      setError(e?.message || 'فشل حذف الصلاحية');
+    } finally {
+      setActionLoading(false);
     }
   };
 
   const filteredPermissions = permissions.filter(p => {
     const matchesSearch =
-      p.display_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (p.display_name || p.name).toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesGroup = !filterGroup || p.group === filterGroup;
     return matchesSearch && matchesGroup;
@@ -176,6 +226,12 @@ export default function PermissionsPage() {
           إضافة صلاحية
         </Button>
       </div>
+
+      {error && (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-destructive text-sm">
+          {error}
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -251,7 +307,7 @@ export default function PermissionsPage() {
           <DataTable
             data={filteredPermissions}
             columns={columns}
-            loading={loading}
+            loading={loading || actionLoading}
           />
         </CardContent>
       </Card>
@@ -269,18 +325,15 @@ export default function PermissionsPage() {
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             placeholder="مثال: articles.create"
           />
-          <Input
-            label="الاسم المعروض"
-            value={formData.display_name}
-            onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
-            placeholder="مثال: إضافة مقال"
-          />
           <Select
-            label="المجموعة"
-            value={formData.group}
-            onChange={(e) => setFormData({ ...formData, group: e.target.value })}
-            options={groupOptions}
-            placeholder="اختر المجموعة"
+            label="الحارس (guard)"
+            value={formData.guard_name}
+            onChange={(e) => setFormData({ ...formData, guard_name: e.target.value })}
+            options={[
+              { value: 'web', label: 'web' },
+              { value: 'api', label: 'api' },
+            ]}
+            placeholder="اختر الحارس"
           />
           <div className="flex items-center justify-end gap-3 pt-4">
             <Button
@@ -289,7 +342,7 @@ export default function PermissionsPage() {
             >
               إلغاء
             </Button>
-            <Button onClick={handleSubmit}>
+            <Button onClick={handleSubmit} isLoading={actionLoading}>
               {modal.mode === 'create' ? 'إضافة' : 'حفظ'}
             </Button>
           </div>

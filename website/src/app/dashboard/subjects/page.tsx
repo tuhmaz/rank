@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Plus, Search, Edit, Trash2, BookMarked, Layers } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Plus, Search, Edit, Trash2, BookMarked, Layers, ChevronDown } from 'lucide-react';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
@@ -10,24 +10,10 @@ import Modal from '@/components/ui/Modal';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import type { Subject } from '@/types';
-
-const mockSubjects: Subject[] = [
-  { id: 1, name: 'الرياضيات', slug: 'math', description: 'مادة الرياضيات', class_id: 1, school_class: { id: 1, name: 'الصف الأول', slug: 'grade-1', grade_level: 'primary' }, articles_count: 25 },
-  { id: 2, name: 'اللغة العربية', slug: 'arabic', description: 'مادة اللغة العربية', class_id: 1, school_class: { id: 1, name: 'الصف الأول', slug: 'grade-1', grade_level: 'primary' }, articles_count: 32 },
-  { id: 3, name: 'العلوم', slug: 'science', description: 'مادة العلوم', class_id: 2, school_class: { id: 2, name: 'الصف الثاني', slug: 'grade-2', grade_level: 'primary' }, articles_count: 18 },
-  { id: 4, name: 'اللغة الإنجليزية', slug: 'english', description: 'مادة اللغة الإنجليزية', class_id: 3, school_class: { id: 3, name: 'الصف الأول المتوسط', slug: 'middle-1', grade_level: 'middle' }, articles_count: 22 },
-  { id: 5, name: 'التاريخ', slug: 'history', description: 'مادة التاريخ', class_id: 4, school_class: { id: 4, name: 'الصف الأول الثانوي', slug: 'high-1', grade_level: 'high' }, articles_count: 15 },
-];
-
-const classOptions = [
-  { value: '1', label: 'الصف الأول الابتدائي' },
-  { value: '2', label: 'الصف الثاني الابتدائي' },
-  { value: '3', label: 'الصف الأول المتوسط' },
-  { value: '4', label: 'الصف الأول الثانوي' },
-];
+import { subjectsService, COUNTRIES } from '@/lib/api/services';
 
 export default function SubjectsPage() {
-  const [subjects, setSubjects] = useState<Subject[]>(mockSubjects);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [modal, setModal] = useState<{ open: boolean; mode: 'create' | 'edit'; subject: Subject | null }>({
@@ -35,11 +21,38 @@ export default function SubjectsPage() {
     mode: 'create',
     subject: null,
   });
-  const [formData, setFormData] = useState({ name: '', class_id: '', description: '' });
+  const [selectedCountry, setSelectedCountry] = useState<'1' | '2' | '3' | '4'>('1');
+  const [formData, setFormData] = useState<{ subject_name: string; grade_level: number | '' }>({
+    subject_name: '',
+    grade_level: '',
+  });
+
+  const toCountryName = (id: '1' | '2' | '3' | '4') =>
+    id === '1' ? 'jordan' : id === '2' ? 'saudi' : id === '3' ? 'egypt' : 'palestine';
+
+  const gradeLevelOptions = useMemo(
+    () => Array.from({ length: 12 }, (_, i) => ({ value: i + 1, label: `المستوى ${i + 1}` })),
+    []
+  );
+
+  useEffect(() => {
+    const fetchSubjects = async () => {
+      try {
+        setLoading(true);
+        const data = await subjectsService.getAll(toCountryName(selectedCountry));
+        setSubjects(data);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSubjects();
+  }, [selectedCountry]);
 
   const columns = [
     {
-      key: 'name',
+      key: 'subject_name',
       title: 'اسم المادة',
       sortable: true,
       render: (value: string, item: Subject) => (
@@ -48,25 +61,15 @@ export default function SubjectsPage() {
             <BookMarked className="w-5 h-5 text-accent" />
           </div>
           <div>
-            <p className="font-medium">{value}</p>
-            <p className="text-xs text-muted-foreground">{item.slug}</p>
+            <p className="font-medium">{item.subject_name}</p>
           </div>
         </div>
       ),
     },
     {
-      key: 'school_class.name',
-      title: 'الصف',
-      render: (value: string) => (
-        <Badge variant="info">{value || '-'}</Badge>
-      ),
-    },
-    {
-      key: 'description',
-      title: 'الوصف',
-      render: (value: string) => (
-        <span className="text-muted-foreground text-sm">{value || '-'}</span>
-      ),
+      key: 'grade_level',
+      title: 'المستوى',
+      render: (value: number) => <Badge variant="info">المستوى {value}</Badge>,
     },
     {
       key: 'articles_count',
@@ -82,7 +85,7 @@ export default function SubjectsPage() {
     {
       key: 'actions',
       title: 'الإجراءات',
-      render: (_: any, item: Subject) => (
+      render: (_: unknown, item: Subject) => (
         <div className="flex items-center gap-1">
           <button
             onClick={() => openEditModal(item)}
@@ -101,44 +104,106 @@ export default function SubjectsPage() {
     },
   ];
 
-  const openEditModal = (subject: Subject) => {
-    setFormData({
-      name: subject.name,
-      class_id: String(subject.class_id),
-      description: subject.description || '',
+  const filteredSubjects = subjects.filter((s) =>
+    (s.subject_name ?? '').toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const [expandedGrades, setExpandedGrades] = useState<Set<number>>(new Set());
+
+  const groupedByGrade = filteredSubjects.reduce<Record<number, Subject[]>>((acc, s) => {
+    const key = Number(s.grade_level || 0);
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(s);
+    return acc;
+  }, {});
+
+  const orderedGrades = Object.keys(groupedByGrade)
+    .map((k) => Number(k))
+    .sort((a, b) => a - b);
+
+  const toggleGrade = (grade: number) => {
+    setExpandedGrades((prev) => {
+      const next = new Set(prev);
+      if (next.has(grade)) next.delete(grade);
+      else next.add(grade);
+      return next;
     });
+  };
+
+  const arabicOrdinals = [
+    'الأول',
+    'الثاني',
+    'الثالث',
+    'الرابع',
+    'الخامس',
+    'السادس',
+    'السابع',
+    'الثامن',
+    'التاسع',
+    'العاشر',
+    'الحادي عشر',
+    'الثاني عشر',
+  ];
+
+  const getGradeName = (grade: number) => {
+    if (grade >= 1 && grade <= 12) {
+      return `الصف ${arabicOrdinals[grade - 1]}`;
+    }
+    return `الصف ${grade}`;
+  };
+
+  const formatSubjectsCount = (count: number) => {
+    const num = Number(count).toLocaleString('ar-SA');
+    return `${num} ${count === 1 ? 'مادة' : 'مواد'}`;
+  };
+
+  const openEditModal = (subject: Subject) => {
+    setFormData({ subject_name: subject.subject_name, grade_level: subject.grade_level });
     setModal({ open: true, mode: 'edit', subject });
   };
 
   const openCreateModal = () => {
-    setFormData({ name: '', class_id: '', description: '' });
+    setFormData({ subject_name: '', grade_level: '' });
     setModal({ open: true, mode: 'create', subject: null });
   };
 
-  const handleSubmit = () => {
-    if (modal.mode === 'create') {
-      const newSubject: Subject = {
-        id: Date.now(),
-        name: formData.name,
-        slug: formData.name.toLowerCase().replace(/\s+/g, '-'),
-        class_id: Number(formData.class_id),
-        description: formData.description,
-        articles_count: 0,
-      };
-      setSubjects([...subjects, newSubject]);
-    } else if (modal.subject) {
-      setSubjects(subjects.map((s) =>
-        s.id === modal.subject?.id
-          ? { ...s, name: formData.name, class_id: Number(formData.class_id), description: formData.description }
-          : s
-      ));
+  const handleSubmit = async () => {
+    if (!formData.subject_name || !formData.grade_level) return;
+    try {
+      setLoading(true);
+      if (modal.mode === 'create') {
+        await subjectsService.create({
+          country: toCountryName(selectedCountry),
+          subject_name: formData.subject_name,
+          grade_level: Number(formData.grade_level),
+        });
+      } else if (modal.subject) {
+        await subjectsService.update(modal.subject.id, {
+          country: toCountryName(selectedCountry),
+          subject_name: formData.subject_name,
+          grade_level: Number(formData.grade_level),
+        });
+      }
+      const refreshed = await subjectsService.getAll(toCountryName(selectedCountry));
+      setSubjects(refreshed);
+      setModal({ open: false, mode: 'create', subject: null });
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
     }
-    setModal({ open: false, mode: 'create', subject: null });
   };
 
-  const handleDelete = (id: number) => {
-    if (confirm('هل أنت متأكد من حذف هذه المادة؟')) {
-      setSubjects(subjects.filter((s) => s.id !== id));
+  const handleDelete = async (id: number) => {
+    if (!confirm('هل أنت متأكد من حذف هذه المادة؟')) return;
+    try {
+      setLoading(true);
+      await subjectsService.delete(id, toCountryName(selectedCountry));
+      setSubjects((prev) => prev.filter((s) => s.id !== id));
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -150,9 +215,22 @@ export default function SubjectsPage() {
           <h1 className="text-2xl font-bold">إدارة المواد الدراسية</h1>
           <p className="text-muted-foreground">إدارة المواد والمناهج الدراسية</p>
         </div>
-        <Button leftIcon={<Plus className="w-4 h-4" />} onClick={openCreateModal}>
-          إضافة مادة
-        </Button>
+        <div className="flex items-center gap-2">
+          <select
+            value={selectedCountry}
+            onChange={(e) => setSelectedCountry(e.target.value as '1' | '2' | '3' | '4')}
+            className="bg-card border border-border rounded-lg px-3 py-2 text-sm"
+          >
+            {COUNTRIES.map((country) => (
+              <option key={country.id} value={country.id}>
+                {country.name}
+              </option>
+            ))}
+          </select>
+          <Button leftIcon={<Plus className="w-4 h-4" />} onClick={openCreateModal}>
+            إضافة مادة
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -175,7 +253,7 @@ export default function SubjectsPage() {
           <CardContent className="py-4">
             <p className="text-sm text-muted-foreground">متوسط المقالات</p>
             <p className="text-2xl font-bold text-success">
-              {Math.round(subjects.reduce((sum, s) => sum + (s.articles_count || 0), 0) / subjects.length)}
+              {subjects.length ? Math.round(subjects.reduce((sum, s) => sum + (s.articles_count || 0), 0) / subjects.length) : 0}
             </p>
           </CardContent>
         </Card>
@@ -187,23 +265,54 @@ export default function SubjectsPage() {
           <CardTitle>قائمة المواد</CardTitle>
           <div className="relative">
             <Search className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <label htmlFor="subjects-search" className="sr-only">بحث عن مادة</label>
             <input
               type="text"
               placeholder="بحث..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              id="subjects-search"
+              name="search"
               className="bg-muted border-none rounded-lg pr-9 pl-4 py-2 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </div>
         </CardHeader>
         <CardContent>
-          <DataTable
-            data={subjects.filter((s) =>
-              s.name.toLowerCase().includes(searchQuery.toLowerCase())
-            )}
-            columns={columns}
-            loading={loading}
-          />
+          {loading ? (
+            <DataTable data={[]} columns={columns} loading={loading} />
+          ) : orderedGrades.length === 0 ? (
+            <DataTable data={[]} columns={columns} loading={false} emptyMessage="لا توجد مواد مطابقة" />
+          ) : (
+            <div className="space-y-6">
+              {orderedGrades.map((grade) => (
+                <div key={grade} className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => toggleGrade(grade)}
+                    className="w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg bg-muted/40 hover:bg-muted/60 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Badge variant="info" size="md">{getGradeName(grade)}</Badge>
+                      <span className="text-sm text-muted-foreground">
+                        {formatSubjectsCount(groupedByGrade[grade]?.length || 0)}
+                      </span>
+                    </div>
+                    <ChevronDown
+                      className={`w-4 h-4 text-muted-foreground transition-transform ${expandedGrades.has(grade) ? 'rotate-180' : 'rotate-0'}`}
+                    />
+                  </button>
+                  {expandedGrades.has(grade) ? (
+                    <DataTable
+                      data={groupedByGrade[grade]}
+                      columns={columns}
+                      loading={false}
+                      emptyMessage="لا توجد مواد"
+                    />
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -216,27 +325,17 @@ export default function SubjectsPage() {
         <div className="space-y-4 mt-4">
           <Input
             label="اسم المادة"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            value={formData.subject_name}
+            onChange={(e) => setFormData({ ...formData, subject_name: e.target.value })}
             placeholder="مثال: الرياضيات"
           />
           <Select
-            label="الصف الدراسي"
-            value={formData.class_id}
-            onChange={(e) => setFormData({ ...formData, class_id: e.target.value })}
-            options={classOptions}
-            placeholder="اختر الصف"
+            label="المستوى"
+            value={formData.grade_level || ''}
+            onChange={(e) => setFormData({ ...formData, grade_level: Number(e.target.value) })}
+            options={gradeLevelOptions}
+            placeholder="اختر المستوى"
           />
-          <div>
-            <label className="mb-1.5 block text-sm font-medium">الوصف</label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              rows={3}
-              className="w-full rounded-lg border border-border bg-card px-4 py-2.5 text-foreground resize-none focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-              placeholder="وصف المادة (اختياري)"
-            />
-          </div>
           <div className="flex items-center justify-end gap-3 pt-4">
             <Button
               variant="outline"

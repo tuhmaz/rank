@@ -17,7 +17,7 @@ export const subjectsService = {
       API_ENDPOINTS.SUBJECTS.LIST,
       { country }
     );
-    return response.data;
+    return (response.data as any).data ?? (response.data as any);
   },
 
   /**
@@ -28,7 +28,7 @@ export const subjectsService = {
       API_ENDPOINTS.SUBJECTS.SHOW(id),
       { country }
     );
-    return response.data;
+    return (response.data as any).data ?? (response.data as any);
   },
 
   /**
@@ -39,7 +39,7 @@ export const subjectsService = {
       API_ENDPOINTS.SUBJECTS.STORE,
       data
     );
-    return response.data;
+    return (response.data as any).data ?? (response.data as any);
   },
 
   /**
@@ -50,7 +50,7 @@ export const subjectsService = {
       API_ENDPOINTS.SUBJECTS.UPDATE(id),
       data
     );
-    return response.data;
+    return (response.data as any).data ?? (response.data as any);
   },
 
   /**

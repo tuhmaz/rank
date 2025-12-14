@@ -2,7 +2,7 @@
 
 import { cn } from '@/lib/utils';
 import { ChevronDown } from 'lucide-react';
-import { forwardRef, SelectHTMLAttributes } from 'react';
+import { forwardRef, SelectHTMLAttributes, useId } from 'react';
 
 interface Option {
   value: string | number;
@@ -18,16 +18,19 @@ interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
 
 const Select = forwardRef<HTMLSelectElement, SelectProps>(
   ({ className, label, error, options, placeholder, ...props }, ref) => {
+    const autoId = useId();
+    const selectId = props.id ?? autoId;
     return (
       <div className="w-full">
         {label && (
-          <label className="mb-1.5 block text-sm font-medium text-foreground">
+          <label htmlFor={selectId} className="mb-1.5 block text-sm font-medium text-foreground">
             {label}
           </label>
         )}
         <div className="relative">
           <select
             ref={ref}
+            id={selectId}
             className={cn(
               'w-full rounded-lg border border-border bg-card px-4 py-2.5 text-foreground appearance-none transition-colors duration-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20',
               error && 'border-error focus:border-error focus:ring-error/20',

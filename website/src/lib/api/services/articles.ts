@@ -28,7 +28,7 @@ export const articlesService = {
       API_ENDPOINTS.ARTICLES.LIST,
       filters
     );
-    return response;
+    return response.data;
   },
 
   /**
@@ -39,7 +39,7 @@ export const articlesService = {
       API_ENDPOINTS.ARTICLES.CREATE,
       { country }
     );
-    return response.data;
+    return (response.data as any).data ?? (response.data as any);
   },
 
   /**
@@ -84,6 +84,8 @@ export const articlesService = {
       if (value !== undefined && value !== null) {
         if (value instanceof File) {
           formData.append(key, value);
+        } else if (typeof value === 'boolean') {
+          formData.append(key, value ? '1' : '0');
         } else {
           formData.append(key, String(value));
         }
@@ -109,6 +111,8 @@ export const articlesService = {
         if (value instanceof File) {
           // new_file for updating the attachment
           formData.append(key === 'file' ? 'new_file' : key, value);
+        } else if (typeof value === 'boolean') {
+          formData.append(key, value ? '1' : '0');
         } else {
           formData.append(key, String(value));
         }
@@ -171,6 +175,17 @@ export const articlesService = {
       { country }
     );
     return response.data;
+  },
+ 
+  async isTitleUnique(title: string, country: string = '1'): Promise<boolean> {
+    if (!title.trim()) return true;
+    const response = await apiClient.get<PaginatedResponse<Article>>(
+      API_ENDPOINTS.ARTICLES.LIST,
+      { country, q: title, per_page: 1 }
+    );
+    const list = response.data?.data || [];
+    const found = list.some((a) => (a.title || '').trim().toLowerCase() === title.trim().toLowerCase());
+    return !found;
   },
 };
 

@@ -160,22 +160,33 @@ class SecurityLogApiController extends Controller
     /**
      * Delete one log
      */
-    public function destroy(SecurityLog $log)
+    public function destroy($id)
     {
-        $backup = $log->replicate();
-
-        $log->delete();
-
-        SecurityLog::create([
-            'ip_address' => $backup->ip_address,
-            'event_type' => 'log_deleted',
-            'description' => "Deleted log: {$backup->event_type}",
-            'user_id' => Auth::id(),
-            'severity' => 'info',
-            'is_resolved' => true
-        ]);
-
-        return new BaseResource(['message' => 'Log deleted']);
+        try {
+            $log = SecurityLog::findOrFail($id);
+            $backup = $log->replicate();
+            $log->delete();
+            $ipAddress = $backup->ip_address;
+            if (!$ipAddress || !filter_var($ipAddress, FILTER_VALIDATE_IP)) {
+                $ipAddress = request()->ip();
+            }
+            if (!$ipAddress || !filter_var($ipAddress, FILTER_VALIDATE_IP)) {
+                $ipAddress = '0.0.0.0';
+            }
+            SecurityLog::create([
+                'ip_address' => $ipAddress,
+                'event_type' => 'log_deleted',
+                'description' => "Deleted log: {$backup->event_type}",
+                'user_id' => Auth::id(),
+                'severity' => 'info',
+                'is_resolved' => true
+            ]);
+            return new BaseResource(['message' => 'Log deleted']);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return (new BaseResource(['message' => 'Log not found']))
+                ->response(request())
+                ->setStatusCode(404);
+        }
     }
 
     /**

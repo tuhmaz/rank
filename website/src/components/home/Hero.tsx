@@ -6,6 +6,20 @@ import { ArrowLeft, Play, Sparkles } from 'lucide-react';
 import Button from '@/components/ui/Button';
 
 export default function Hero() {
+  const pr = (seed: number) => {
+    const x = Math.sin(seed) * 10000;
+    return x - Math.floor(x);
+  };
+
+  const floaters = Array.from({ length: 6 }, (_, i) => ({
+    top: 20 + pr(i * 3.1415) * 60,
+    left: 10 + pr(i * 2.7182) * 80,
+    duration: 3 + pr(i * 1.618) * 2,
+    accent: i % 2 === 0,
+    delay: 0.5 + i * 0.1,
+    wobbleDelay: i * 0.2,
+  }));
+
   return (
     <section className="min-h-screen relative overflow-hidden flex items-center pt-20">
       {/* Background Effects */}
@@ -128,16 +142,16 @@ export default function Hero() {
               </div>
 
               {/* Floating Elements */}
-              {[...Array(6)].map((_, i) => (
+              {floaters.map((f, i) => (
                 <motion.div
                   key={i}
                   initial={{ opacity: 0, scale: 0 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.5 + i * 0.1 }}
+                  transition={{ delay: f.delay }}
                   style={{
                     position: 'absolute',
-                    top: `${20 + Math.random() * 60}%`,
-                    left: `${10 + Math.random() * 80}%`,
+                    top: `${f.top}%`,
+                    left: `${f.left}%`,
                   }}
                 >
                   <motion.div
@@ -146,17 +160,13 @@ export default function Hero() {
                       rotate: [0, 10, -10, 0],
                     }}
                     transition={{
-                      duration: 3 + Math.random() * 2,
+                      duration: f.duration,
                       repeat: Infinity,
-                      delay: i * 0.2,
+                      delay: f.wobbleDelay,
                     }}
-                    className={`w-12 h-12 rounded-xl ${
-                      i % 2 === 0 ? 'bg-primary/20' : 'bg-accent/20'
-                    } backdrop-blur-sm flex items-center justify-center shadow-lg`}
+                    className={`w-12 h-12 rounded-xl ${f.accent ? 'bg-primary/20' : 'bg-accent/20'} backdrop-blur-sm flex items-center justify-center shadow-lg`}
                   >
-                    <div className={`w-6 h-6 rounded-lg ${
-                      i % 2 === 0 ? 'bg-primary' : 'bg-accent'
-                    }`} />
+                    <div className={`w-6 h-6 rounded-lg ${f.accent ? 'bg-primary' : 'bg-accent'}`} />
                   </motion.div>
                 </motion.div>
               ))}

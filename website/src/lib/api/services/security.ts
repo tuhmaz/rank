@@ -54,7 +54,7 @@ export const securityService = {
     const response = await apiClient.get<{ data: SecurityOverview }>(
       API_ENDPOINTS.SECURITY.OVERVIEW
     );
-    return response.data;
+    return (response.data as any)?.data ?? (response.data as any);
   },
 
   /**
@@ -65,7 +65,7 @@ export const securityService = {
       API_ENDPOINTS.SECURITY.LOGS,
       filters
     );
-    return response;
+    return (response.data as any);
   },
 
   /**

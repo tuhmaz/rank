@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Plus, Search, Edit, Trash2, Calendar, BookOpen } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Plus, Search, Edit, Trash2, Calendar, BookOpen, ChevronDown } from 'lucide-react';
 import Card, { CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
@@ -10,24 +10,13 @@ import Modal from '@/components/ui/Modal';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import type { Semester } from '@/types';
+import { semestersService, COUNTRIES } from '@/lib/api/services';
 
-const mockSemesters: Semester[] = [
-  { id: 1, name: 'الفصل الدراسي الأول', slug: 'semester-1', class_id: 1, school_class: { id: 1, name: 'الصف الأول', slug: 'grade-1', grade_level: 'primary' }, articles_count: 45 },
-  { id: 2, name: 'الفصل الدراسي الثاني', slug: 'semester-2', class_id: 1, school_class: { id: 1, name: 'الصف الأول', slug: 'grade-1', grade_level: 'primary' }, articles_count: 38 },
-  { id: 3, name: 'الفصل الدراسي الأول', slug: 'semester-1-g2', class_id: 2, school_class: { id: 2, name: 'الصف الثاني', slug: 'grade-2', grade_level: 'primary' }, articles_count: 52 },
-  { id: 4, name: 'الفصل الدراسي الثاني', slug: 'semester-2-g2', class_id: 2, school_class: { id: 2, name: 'الصف الثاني', slug: 'grade-2', grade_level: 'primary' }, articles_count: 41 },
-  { id: 5, name: 'الفصل الدراسي الأول', slug: 'semester-1-m1', class_id: 3, school_class: { id: 3, name: 'الصف الأول المتوسط', slug: 'middle-1', grade_level: 'middle' }, articles_count: 35 },
-];
-
-const classOptions = [
-  { value: '1', label: 'الصف الأول الابتدائي' },
-  { value: '2', label: 'الصف الثاني الابتدائي' },
-  { value: '3', label: 'الصف الأول المتوسط' },
-  { value: '4', label: 'الصف الأول الثانوي' },
-];
+const toCountryName = (id: '1' | '2' | '3' | '4') =>
+  id === '1' ? 'jordan' : id === '2' ? 'saudi' : id === '3' ? 'egypt' : 'palestine';
 
 export default function SemestersPage() {
-  const [semesters, setSemesters] = useState<Semester[]>(mockSemesters);
+  const [semesters, setSemesters] = useState<Semester[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [modal, setModal] = useState<{ open: boolean; mode: 'create' | 'edit'; semester: Semester | null }>({
@@ -35,11 +24,88 @@ export default function SemestersPage() {
     mode: 'create',
     semester: null,
   });
-  const [formData, setFormData] = useState({ name: '', class_id: '' });
+  const [selectedCountry, setSelectedCountry] = useState<'1' | '2' | '3' | '4'>('1');
+  const [formData, setFormData] = useState<{ semester_name: string; grade_level: number | '' }>({
+    semester_name: '',
+    grade_level: '',
+  });
+
+  const gradeLevelOptions = useMemo(
+    () => Array.from({ length: 12 }, (_, i) => ({ value: i + 1, label: `المستوى ${i + 1}` })),
+    []
+  );
+
+  useEffect(() => {
+    const fetchSemesters = async () => {
+      try {
+        setLoading(true);
+        const data = await semestersService.getAll(toCountryName(selectedCountry));
+        setSemesters(data);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSemesters();
+  }, [selectedCountry]);
+
+  const filteredSemesters = semesters.filter((s) =>
+    (s.semester_name ?? '').toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const [expandedGrades, setExpandedGrades] = useState<Set<number>>(new Set());
+
+  const groupedByGrade = filteredSemesters.reduce<Record<number, Semester[]>>((acc, s) => {
+    const key = Number(s.grade_level || 0);
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(s);
+    return acc;
+  }, {});
+
+  const orderedGrades = Object.keys(groupedByGrade)
+    .map((k) => Number(k))
+    .sort((a, b) => a - b);
+
+  const toggleGrade = (grade: number) => {
+    setExpandedGrades((prev) => {
+      const next = new Set(prev);
+      if (next.has(grade)) next.delete(grade);
+      else next.add(grade);
+      return next;
+    });
+  };
+
+  const arabicOrdinals = [
+    'الأول',
+    'الثاني',
+    'الثالث',
+    'الرابع',
+    'الخامس',
+    'السادس',
+    'السابع',
+    'الثامن',
+    'التاسع',
+    'العاشر',
+    'الحادي عشر',
+    'الثاني عشر',
+  ];
+
+  const getGradeName = (grade: number) => {
+    if (grade >= 1 && grade <= 12) {
+      return `الصف ${arabicOrdinals[grade - 1]}`;
+    }
+    return `الصف ${grade}`;
+  };
+
+  const formatSemestersCount = (count: number) => {
+    const num = Number(count).toLocaleString('ar-SA');
+    return `${num} ${count === 1 ? 'فصل' : 'فصول'}`;
+  };
 
   const columns = [
     {
-      key: 'name',
+      key: 'semester_name',
       title: 'اسم الفصل',
       sortable: true,
       render: (value: string, item: Semester) => (
@@ -48,18 +114,15 @@ export default function SemestersPage() {
             <Calendar className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <p className="font-medium">{value}</p>
-            <p className="text-xs text-muted-foreground">{item.slug}</p>
+            <p className="font-medium">{item.semester_name}</p>
           </div>
         </div>
       ),
     },
     {
-      key: 'school_class.name',
-      title: 'الصف الدراسي',
-      render: (value: string, item: Semester) => (
-        <Badge variant="info">{item.school_class?.name || '-'}</Badge>
-      ),
+      key: 'grade_level',
+      title: 'المستوى',
+      render: (value: number) => <Badge variant="info">المستوى {value}</Badge>,
     },
     {
       key: 'articles_count',
@@ -75,7 +138,7 @@ export default function SemestersPage() {
     {
       key: 'actions',
       title: 'الإجراءات',
-      render: (_: any, item: Semester) => (
+      render: (_: unknown, item: Semester) => (
         <div className="flex items-center gap-1">
           <button
             onClick={() => openEditModal(item)}
@@ -95,41 +158,52 @@ export default function SemestersPage() {
   ];
 
   const openEditModal = (semester: Semester) => {
-    setFormData({
-      name: semester.name,
-      class_id: String(semester.class_id),
-    });
+    setFormData({ semester_name: semester.semester_name, grade_level: semester.grade_level });
     setModal({ open: true, mode: 'edit', semester });
   };
 
   const openCreateModal = () => {
-    setFormData({ name: '', class_id: '' });
+    setFormData({ semester_name: '', grade_level: '' });
     setModal({ open: true, mode: 'create', semester: null });
   };
 
-  const handleSubmit = () => {
-    if (modal.mode === 'create') {
-      const newSemester: Semester = {
-        id: Date.now(),
-        name: formData.name,
-        slug: formData.name.toLowerCase().replace(/\s+/g, '-'),
-        class_id: Number(formData.class_id),
-        articles_count: 0,
-      };
-      setSemesters([...semesters, newSemester]);
-    } else if (modal.semester) {
-      setSemesters(semesters.map((s) =>
-        s.id === modal.semester?.id
-          ? { ...s, name: formData.name, class_id: Number(formData.class_id) }
-          : s
-      ));
+  const handleSubmit = async () => {
+    if (!formData.semester_name || !formData.grade_level) return;
+    try {
+      setLoading(true);
+      if (modal.mode === 'create') {
+        await semestersService.create({
+          country: toCountryName(selectedCountry),
+          semester_name: formData.semester_name,
+          grade_level: Number(formData.grade_level),
+        });
+      } else if (modal.semester) {
+        await semestersService.update(modal.semester.id, {
+          country: toCountryName(selectedCountry),
+          semester_name: formData.semester_name,
+          grade_level: Number(formData.grade_level),
+        });
+      }
+      const refreshed = await semestersService.getAll(toCountryName(selectedCountry));
+      setSemesters(refreshed);
+      setModal({ open: false, mode: 'create', semester: null });
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
     }
-    setModal({ open: false, mode: 'create', semester: null });
   };
 
-  const handleDelete = (id: number) => {
-    if (confirm('هل أنت متأكد من حذف هذا الفصل؟')) {
-      setSemesters(semesters.filter((s) => s.id !== id));
+  const handleDelete = async (id: number) => {
+    if (!confirm('هل أنت متأكد من حذف هذا الفصل؟')) return;
+    try {
+      setLoading(true);
+      await semestersService.delete(id, toCountryName(selectedCountry));
+      setSemesters((prev) => prev.filter((s) => s.id !== id));
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -141,9 +215,22 @@ export default function SemestersPage() {
           <h1 className="text-2xl font-bold">إدارة الفصول الدراسية</h1>
           <p className="text-muted-foreground">إدارة فصول العام الدراسي</p>
         </div>
-        <Button leftIcon={<Plus className="w-4 h-4" />} onClick={openCreateModal}>
-          إضافة فصل
-        </Button>
+        <div className="flex items-center gap-2">
+          <select
+            value={selectedCountry}
+            onChange={(e) => setSelectedCountry(e.target.value as '1' | '2' | '3' | '4')}
+            className="bg-card border border-border rounded-lg px-3 py-2 text-sm"
+          >
+            {COUNTRIES.map((country) => (
+              <option key={country.id} value={country.id}>
+                {country.name}
+              </option>
+            ))}
+          </select>
+          <Button leftIcon={<Plus className="w-4 h-4" />} onClick={openCreateModal}>
+            إضافة فصل
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -178,23 +265,54 @@ export default function SemestersPage() {
           <CardTitle>قائمة الفصول</CardTitle>
           <div className="relative">
             <Search className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <label htmlFor="semesters-search" className="sr-only">بحث عن فصل</label>
             <input
               type="text"
               placeholder="بحث..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              id="semesters-search"
+              name="search"
               className="bg-muted border-none rounded-lg pr-9 pl-4 py-2 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </div>
         </CardHeader>
         <CardContent>
-          <DataTable
-            data={semesters.filter((s) =>
-              s.name.toLowerCase().includes(searchQuery.toLowerCase())
-            )}
-            columns={columns}
-            loading={loading}
-          />
+          {loading ? (
+            <DataTable data={[]} columns={columns} loading={loading} />
+          ) : orderedGrades.length === 0 ? (
+            <DataTable data={[]} columns={columns} loading={false} emptyMessage="لا توجد فصول مطابقة" />
+          ) : (
+            <div className="space-y-6">
+              {orderedGrades.map((grade) => (
+                <div key={grade} className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => toggleGrade(grade)}
+                    className="w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg bg-muted/40 hover:bg-muted/60 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Badge variant="info" size="md">{getGradeName(grade)}</Badge>
+                      <span className="text-sm text-muted-foreground">
+                        {formatSemestersCount(groupedByGrade[grade]?.length || 0)}
+                      </span>
+                    </div>
+                    <ChevronDown
+                      className={`w-4 h-4 text-muted-foreground transition-transform ${expandedGrades.has(grade) ? 'rotate-180' : 'rotate-0'}`}
+                    />
+                  </button>
+                  {expandedGrades.has(grade) ? (
+                    <DataTable
+                      data={groupedByGrade[grade]}
+                      columns={columns}
+                      loading={false}
+                      emptyMessage="لا توجد فصول"
+                    />
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -207,16 +325,16 @@ export default function SemestersPage() {
         <div className="space-y-4 mt-4">
           <Input
             label="اسم الفصل"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            value={formData.semester_name}
+            onChange={(e) => setFormData({ ...formData, semester_name: e.target.value })}
             placeholder="مثال: الفصل الدراسي الأول"
           />
           <Select
-            label="الصف الدراسي"
-            value={formData.class_id}
-            onChange={(e) => setFormData({ ...formData, class_id: e.target.value })}
-            options={classOptions}
-            placeholder="اختر الصف"
+            label="المستوى"
+            value={formData.grade_level || ''}
+            onChange={(e) => setFormData({ ...formData, grade_level: Number(e.target.value) })}
+            options={gradeLevelOptions}
+            placeholder="اختر المستوى"
           />
           <div className="flex items-center justify-end gap-3 pt-4">
             <Button

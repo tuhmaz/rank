@@ -7,28 +7,30 @@ export const authService = {
    * Login user with credentials
    */
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    const response = await apiClient.post<{ data: AuthResponse }>(
+    const response = await apiClient.post<AuthResponse | { data: AuthResponse }>(
       API_ENDPOINTS.AUTH.LOGIN,
       credentials
     );
-    if (response.data.token) {
-      apiClient.setToken(response.data.token);
+    const payload = 'data' in response.data ? (response.data as { data: AuthResponse }).data : (response.data as AuthResponse);
+    if (payload.token) {
+      apiClient.setToken(payload.token);
     }
-    return response.data;
+    return payload;
   },
 
   /**
    * Register new user
    */
   async register(data: RegisterData): Promise<AuthResponse> {
-    const response = await apiClient.post<{ data: AuthResponse }>(
+    const response = await apiClient.post<AuthResponse | { data: AuthResponse }>(
       API_ENDPOINTS.AUTH.REGISTER,
       data
     );
-    if (response.data.token) {
-      apiClient.setToken(response.data.token);
+    const payload = 'data' in response.data ? (response.data as { data: AuthResponse }).data : (response.data as AuthResponse);
+    if (payload.token) {
+      apiClient.setToken(payload.token);
     }
-    return response.data;
+    return payload;
   },
 
   /**
@@ -107,14 +109,15 @@ export const authService = {
    * Handle Google OAuth callback
    */
   async handleGoogleCallback(code: string): Promise<AuthResponse> {
-    const response = await apiClient.get<{ data: AuthResponse }>(
+    const response = await apiClient.get<AuthResponse | { data: AuthResponse }>(
       API_ENDPOINTS.AUTH.GOOGLE_CALLBACK,
       { code }
     );
-    if (response.data.token) {
-      apiClient.setToken(response.data.token);
+    const payload = 'data' in response.data ? (response.data as { data: AuthResponse }).data : (response.data as AuthResponse);
+    if (payload.token) {
+      apiClient.setToken(payload.token);
     }
-    return response.data;
+    return payload;
   },
 };
 

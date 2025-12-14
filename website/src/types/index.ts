@@ -27,7 +27,14 @@ export interface User {
   name: string;
   email: string;
   profile_photo_path?: string;
+  profile_photo_url?: string;
   google_id?: string;
+  phone?: string;
+  bio?: string;
+  job_title?: string;
+  gender?: string;
+  country?: string;
+  social_links?: Record<string, string> | any[];
   roles?: Role[];
   permissions?: Permission[];
   email_verified_at?: string;

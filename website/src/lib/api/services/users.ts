@@ -17,6 +17,8 @@ interface CreateUserData {
 interface UpdateUserData {
   name?: string;
   email?: string;
+  phone?: string;
+  bio?: string;
   profile_photo?: File;
 }
 
@@ -25,21 +27,42 @@ export const usersService = {
    * Get all users with optional filters
    */
   async getAll(filters?: UserFilters): Promise<User[]> {
-    const response = await apiClient.get<{ data: User[] }>(
-      API_ENDPOINTS.USERS.LIST,
-      filters
-    );
-    return response.data;
+    try {
+      const response = await apiClient.get<{ data: User[] }>(
+        API_ENDPOINTS.USERS.LIST,
+        filters as Record<string, string | number | boolean | undefined> | undefined
+      );
+      return (response.data as any).data ?? (response.data as any);
+    } catch (e: any) {
+      if (e && e.status === 404) {
+        const response2 = await apiClient.get<{ data: User[] }>(
+          '/dashboard/users',
+          filters as Record<string, string | number | boolean | undefined> | undefined
+        );
+        return (response2.data as any).data ?? (response2.data as any);
+      }
+      throw e;
+    }
   },
 
   /**
    * Get single user by ID
    */
   async getById(id: number | string): Promise<User> {
-    const response = await apiClient.get<{ data: User }>(
-      API_ENDPOINTS.USERS.SHOW(id)
-    );
-    return response.data;
+    try {
+      const response = await apiClient.get<{ data: User }>(
+        API_ENDPOINTS.USERS.SHOW(id)
+      );
+      return (response.data as any).data ?? (response.data as any);
+    } catch (e: any) {
+      if (e && e.status === 404) {
+        const response2 = await apiClient.get<{ data: User }>(
+          `/dashboard/users/${id}`
+        );
+        return (response2.data as any).data ?? (response2.data as any);
+      }
+      throw e;
+    }
   },
 
   /**
@@ -50,7 +73,7 @@ export const usersService = {
       API_ENDPOINTS.USERS.STORE,
       data
     );
-    return response.data;
+    return (response.data as any).data ?? (response.data as any);
   },
 
   /**
@@ -72,14 +95,14 @@ export const usersService = {
         API_ENDPOINTS.USERS.UPDATE(id),
         formData
       );
-      return response.data;
+      return (response.data as any).data ?? (response.data as any);
     }
 
     const response = await apiClient.put<{ data: User }>(
       API_ENDPOINTS.USERS.UPDATE(id),
       data
     );
-    return response.data;
+    return (response.data as any).data ?? (response.data as any);
   },
 
   /**
@@ -93,14 +116,15 @@ export const usersService = {
       API_ENDPOINTS.USERS.UPDATE_ROLES(id),
       data
     );
-    return response.data;
+    return (response.data as any).data ?? (response.data as any);
   },
 
   /**
    * Delete user
    */
   async delete(id: number | string): Promise<{ message: string }> {
-    return apiClient.delete(API_ENDPOINTS.USERS.DELETE(id));
+    const resp = await apiClient.delete<{ message: string }>(API_ENDPOINTS.USERS.DELETE(id));
+    return (resp.data as any).data ?? (resp.data as any);
   },
 
   /**
@@ -111,7 +135,7 @@ export const usersService = {
       API_ENDPOINTS.USERS.BULK_DELETE,
       { user_ids: userIds }
     );
-    return response.data;
+    return (response.data as any).data ?? (response.data as any);
   },
 };
 

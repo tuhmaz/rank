@@ -20,7 +20,7 @@ import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import DataTable from '@/components/ui/DataTable';
 import Modal from '@/components/ui/Modal';
-import { articlesService, COUNTRIES } from '@/lib/api/services';
+import { articlesService, COUNTRIES, schoolClassesService, subjectsService, semestersService } from '@/lib/api/services';
 import type { Article, PaginatedResponse } from '@/types';
 
 export default function ArticlesPage() {
@@ -29,6 +29,13 @@ export default function ArticlesPage() {
   const [actionLoading, setActionLoading] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCountry, setSelectedCountry] = useState('1');
+  const [classesMap, setClassesMap] = useState<Record<number, string>>({});
+  const [classesById, setClassesById] = useState<Record<number, string>>({});
+  const [subjectsMap, setSubjectsMap] = useState<Record<number, string>>({});
+  const [semestersMap, setSemestersMap] = useState<Record<number, string>>({});
+  const [classesCache, setClassesCache] = useState<Record<number, string>>({});
+  const [subjectsCache, setSubjectsCache] = useState<Record<number, string>>({});
+  const [semestersCache, setSemestersCache] = useState<Record<number, string>>({});
   const [pagination, setPagination] = useState({
     current_page: 1,
     last_page: 1,
@@ -39,6 +46,9 @@ export default function ArticlesPage() {
     open: false,
     article: null,
   });
+
+  const toCountryName = (id: string) =>
+    id === '1' ? 'jordan' : id === '2' ? 'saudi' : id === '3' ? 'egypt' : 'palestine';
 
   const fetchArticles = useCallback(async (page = 1) => {
     try {
@@ -63,6 +73,49 @@ export default function ArticlesPage() {
   }, [selectedCountry]);
 
   useEffect(() => {
+    setClassesCache({});
+    setSubjectsCache({});
+    setSemestersCache({});
+  }, [selectedCountry]);
+
+  useEffect(() => {
+    const loadRefs = async () => {
+      try {
+        const [classes, subjects, semesters] = await Promise.all([
+          schoolClassesService.getAll(selectedCountry),
+          subjectsService.getAll(toCountryName(selectedCountry)),
+          semestersService.getAll(toCountryName(selectedCountry)),
+        ]);
+        const cm: Record<number, string> = {};
+        const cmId: Record<number, string> = {};
+        classes.forEach((c) => {
+          cm[c.grade_level] = c.grade_name;
+          cmId[c.id] = c.grade_name;
+        });
+        const sm: Record<number, string> = {};
+        subjects.forEach((s) => {
+          sm[s.id] = s.subject_name;
+        });
+        const semm: Record<number, string> = {};
+        semesters.forEach((s) => {
+          semm[s.id] = s.semester_name;
+        });
+        setClassesMap(cm);
+        setClassesById(cmId);
+        setSubjectsMap(sm);
+        setSemestersMap(semm);
+      } catch (e) {
+        console.error(e);
+        setClassesMap({});
+        setClassesById({});
+        setSubjectsMap({});
+        setSemestersMap({});
+      }
+    };
+    loadRefs();
+  }, [selectedCountry]);
+
+  useEffect(() => {
     const debounce = setTimeout(() => {
       if (searchQuery !== '') {
         fetchArticles(1);
@@ -71,6 +124,76 @@ export default function ArticlesPage() {
     return () => clearTimeout(debounce);
   }, [searchQuery]);
 
+  useEffect(() => {
+    const missingClassIds = Array.from(
+      new Set(
+        articles
+          .map((a) => (a as any).class_id as number | undefined)
+          .filter((id) => !!id && !classesById[id!] && !classesCache[id!])
+      )
+    ) as number[];
+    const missingSubjectIds = Array.from(
+      new Set(
+        articles
+          .map((a) => a.subject_id as number | undefined)
+          .filter((id) => !!id && !subjectsMap[id!] && !subjectsCache[id!])
+      )
+    ) as number[];
+    const missingSemesterIds = Array.from(
+      new Set(
+        articles
+          .map((a) => a.semester_id as number | undefined)
+          .filter((id) => !!id && !semestersMap[id!] && !semestersCache[id!])
+      )
+    ) as number[];
+    const run = async () => {
+      try {
+        if (missingClassIds.length) {
+          const updates: Record<number, string> = {};
+          await Promise.all(
+            missingClassIds.map(async (id) => {
+              try {
+                const c = await schoolClassesService.getById(id, selectedCountry);
+                updates[id] = c.grade_name;
+              } catch {}
+            })
+          );
+          if (Object.keys(updates).length) {
+            setClassesCache((prev) => ({ ...prev, ...updates }));
+          }
+        }
+        if (missingSubjectIds.length) {
+          const updates: Record<number, string> = {};
+          await Promise.all(
+            missingSubjectIds.map(async (id) => {
+              try {
+                const s = await subjectsService.getById(id, toCountryName(selectedCountry));
+                updates[id] = s.subject_name;
+              } catch {}
+            })
+          );
+          if (Object.keys(updates).length) {
+            setSubjectsCache((prev) => ({ ...prev, ...updates }));
+          }
+        }
+        if (missingSemesterIds.length) {
+          const updates: Record<number, string> = {};
+          await Promise.all(
+            missingSemesterIds.map(async (id) => {
+              try {
+                const s = await semestersService.getById(id, toCountryName(selectedCountry));
+                updates[id] = s.semester_name;
+              } catch {}
+            })
+          );
+          if (Object.keys(updates).length) {
+            setSemestersCache((prev) => ({ ...prev, ...updates }));
+          }
+        }
+      } catch {}
+    };
+    run();
+  }, [articles, selectedCountry, classesById, subjectsMap, semestersMap, classesCache, subjectsCache, semestersCache]);
   const handlePublish = async (article: Article) => {
     try {
       setActionLoading(article.id);
@@ -114,19 +237,32 @@ export default function ArticlesPage() {
       ),
     },
     {
-      key: 'author',
-      title: 'الكاتب',
-      render: (_: any, item: Article) => item.author?.name || '-',
-    },
-    {
       key: 'schoolClass',
       title: 'الصف',
-      render: (_: any, item: Article) => item.schoolClass?.grade_name || '-',
+      render: (_: any, item: Article) =>
+        classesById[(item as any).class_id] ||
+        classesCache[(item as any).class_id] ||
+        classesMap[item.grade_level] ||
+        item.schoolClass?.grade_name ||
+        '-',
     },
     {
       key: 'subject',
       title: 'المادة',
-      render: (_: any, item: Article) => item.subject?.subject_name || '-',
+      render: (_: any, item: Article) =>
+        subjectsMap[item.subject_id] ||
+        subjectsCache[item.subject_id] ||
+        (item as any).subject?.subject_name ||
+        '-',
+    },
+    {
+      key: 'semester',
+      title: 'الفصل الدراسي',
+      render: (_: any, item: Article) =>
+        semestersMap[item.semester_id] ||
+        semestersCache[item.semester_id] ||
+        (item as any).semester?.semester_name ||
+        '-',
     },
     {
       key: 'status',
@@ -138,16 +274,47 @@ export default function ArticlesPage() {
       ),
     },
     {
-      key: 'visit_count',
-      title: 'المشاهدات',
-      sortable: true,
-      render: (value: number) => value?.toLocaleString('ar-SA') || '0',
+      key: 'keywords',
+      title: 'كلمات دلالية',
+      render: (_: any, item: Article) => {
+        const kws = (item as any).keywords;
+        if (Array.isArray(kws)) {
+          if (!kws.length) return '-';
+          return (
+            <div className="flex flex-wrap gap-1">
+              {kws.slice(0, 4).map((k: any) => (
+                <Badge key={k.id ?? k.keyword} variant="default">{k.keyword ?? String(k)}</Badge>
+              ))}
+              {kws.length > 4 && (
+                <span className="text-xs text-muted-foreground">+{kws.length - 4}</span>
+              )}
+            </div>
+          );
+        }
+        if (typeof kws === 'string' && kws.trim() !== '') {
+          const parts = kws.split(',').map((s: string) => s.trim()).filter(Boolean);
+          if (!parts.length) return '-';
+          return (
+            <div className="flex flex-wrap gap-1">
+              {parts.slice(0, 4).map((p: string, i: number) => (
+                <Badge key={i} variant="default">{p}</Badge>
+              ))}
+              {parts.length > 4 && (
+                <span className="text-xs text-muted-foreground">+{parts.length - 4}</span>
+              )}
+            </div>
+          );
+        }
+        return '-';
+      },
     },
     {
-      key: 'created_at',
-      title: 'التاريخ',
-      sortable: true,
-      render: (value: string) => new Date(value).toLocaleDateString('ar-SA'),
+      key: 'files',
+      title: 'الملفات',
+      render: (_: any, item: Article) => {
+        const count = (item.files || []).length;
+        return <span>{count.toLocaleString('ar-SA')}</span>;
+      },
     },
     {
       key: 'actions',
@@ -200,7 +367,10 @@ export default function ArticlesPage() {
           <p className="text-muted-foreground">إدارة وتحرير جميع المقالات</p>
         </div>
         <div className="flex items-center gap-2">
+          <label htmlFor="articles-country" className="sr-only">الدولة</label>
           <select
+            id="articles-country"
+            name="country"
             value={selectedCountry}
             onChange={(e) => setSelectedCountry(e.target.value)}
             className="bg-card border border-border rounded-lg px-3 py-2 text-sm"
@@ -250,11 +420,14 @@ export default function ArticlesPage() {
           <div className="flex items-center gap-2">
             <div className="relative">
               <Search className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <label htmlFor="articles-search" className="sr-only">بحث عن مقال</label>
               <input
                 type="text"
                 placeholder="بحث..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                id="articles-search"
+                name="search"
                 className="bg-muted border-none rounded-lg pr-9 pl-4 py-2 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>

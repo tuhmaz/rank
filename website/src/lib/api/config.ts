@@ -46,28 +46,28 @@ export const API_ENDPOINTS = {
 
   // ========== ARTICLES ==========
   ARTICLES: {
-    LIST: '/articles',
-    CREATE: '/articles/create',
-    STORE: '/articles',
-    SHOW: (id: number | string) => `/articles/${id}`,
-    EDIT: (id: number | string) => `/articles/${id}/edit`,
-    UPDATE: (id: number | string) => `/articles/${id}`,
-    DELETE: (id: number | string) => `/articles/${id}`,
-    BY_CLASS: (gradeLevel: number | string) => `/articles/by-class/${gradeLevel}`,
-    BY_KEYWORD: (keyword: string) => `/articles/by-keyword/${keyword}`,
-    PUBLISH: (id: number | string) => `/articles/${id}/publish`,
-    UNPUBLISH: (id: number | string) => `/articles/${id}/unpublish`,
+    LIST: '/dashboard/articles',
+    CREATE: '/dashboard/articles/create',
+    STORE: '/dashboard/articles',
+    SHOW: (id: number | string) => `/dashboard/articles/${id}`,
+    EDIT: (id: number | string) => `/dashboard/articles/${id}/edit`,
+    UPDATE: (id: number | string) => `/dashboard/articles/${id}`,
+    DELETE: (id: number | string) => `/dashboard/articles/${id}`,
+    BY_CLASS: (gradeLevel: number | string) => `/dashboard/articles/by-class/${gradeLevel}`,
+    BY_KEYWORD: (keyword: string) => `/dashboard/articles/by-keyword/${keyword}`,
+    PUBLISH: (id: number | string) => `/dashboard/articles/${id}/publish`,
+    UNPUBLISH: (id: number | string) => `/dashboard/articles/${id}/unpublish`,
   },
 
   // ========== USERS ==========
   USERS: {
-    LIST: '/users',
-    STORE: '/users',
-    SHOW: (id: number | string) => `/users/${id}`,
-    UPDATE: (id: number | string) => `/users/${id}`,
-    DELETE: (id: number | string) => `/users/${id}`,
-    UPDATE_ROLES: (id: number | string) => `/users/${id}/roles-permissions`,
-    BULK_DELETE: '/users/bulk-delete',
+    LIST: '/dashboard/users',
+    STORE: '/dashboard/users',
+    SHOW: (id: number | string) => `/dashboard/users/${id}`,
+    UPDATE: (id: number | string) => `/dashboard/users/${id}`,
+    DELETE: (id: number | string) => `/dashboard/users/${id}`,
+    UPDATE_ROLES: (id: number | string) => `/dashboard/users/${id}/roles-permissions`,
+    BULK_DELETE: '/dashboard/users/bulk-delete',
   },
 
   // ========== ROLES ==========
@@ -78,6 +78,15 @@ export const API_ENDPOINTS = {
     UPDATE: (id: number | string) => `/roles/${id}`,
     DELETE: (id: number | string) => `/roles/${id}`,
     PERMISSIONS: '/permissions',
+  },
+
+  // ========== PERMISSIONS ==========
+  PERMISSIONS: {
+    LIST: '/permissions',
+    STORE: '/permissions',
+    SHOW: (id: number | string) => `/permissions/${id}`,
+    UPDATE: (id: number | string) => `/permissions/${id}`,
+    DELETE: (id: number | string) => `/permissions/${id}`,
   },
 
   // ========== CATEGORIES ==========
@@ -101,29 +110,29 @@ export const API_ENDPOINTS = {
 
   // ========== SCHOOL CLASSES ==========
   SCHOOL_CLASSES: {
-    LIST: '/school-classes',
-    STORE: '/school-classes',
-    SHOW: (id: number | string) => `/school-classes/${id}`,
-    UPDATE: (id: number | string) => `/school-classes/${id}`,
-    DELETE: (id: number | string) => `/school-classes/${id}`,
+    LIST: '/dashboard/school-classes',
+    STORE: '/dashboard/school-classes',
+    SHOW: (id: number | string) => `/dashboard/school-classes/${id}`,
+    UPDATE: (id: number | string) => `/dashboard/school-classes/${id}`,
+    DELETE: (id: number | string) => `/dashboard/school-classes/${id}`,
   },
 
   // ========== SUBJECTS ==========
   SUBJECTS: {
-    LIST: '/subjects',
-    STORE: '/subjects',
-    SHOW: (id: number | string) => `/subjects/${id}`,
-    UPDATE: (id: number | string) => `/subjects/${id}`,
-    DELETE: (id: number | string) => `/subjects/${id}`,
+    LIST: '/dashboard/subjects',
+    STORE: '/dashboard/subjects',
+    SHOW: (id: number | string) => `/dashboard/subjects/${id}`,
+    UPDATE: (id: number | string) => `/dashboard/subjects/${id}`,
+    DELETE: (id: number | string) => `/dashboard/subjects/${id}`,
   },
 
   // ========== SEMESTERS ==========
   SEMESTERS: {
-    LIST: '/semesters',
-    STORE: '/semesters',
-    SHOW: (id: number | string) => `/semesters/${id}`,
-    UPDATE: (id: number | string) => `/semesters/${id}`,
-    DELETE: (id: number | string) => `/semesters/${id}`,
+    LIST: '/dashboard/semesters',
+    STORE: '/dashboard/semesters',
+    SHOW: (id: number | string) => `/dashboard/semesters/${id}`,
+    UPDATE: (id: number | string) => `/dashboard/semesters/${id}`,
+    DELETE: (id: number | string) => `/dashboard/semesters/${id}`,
   },
 
   // ========== FILES ==========
@@ -138,15 +147,15 @@ export const API_ENDPOINTS = {
 
   // ========== MESSAGES ==========
   MESSAGES: {
-    INBOX: '/messages/inbox',
-    SENT: '/messages/sent',
-    DRAFTS: '/messages/drafts',
-    SEND: '/messages/send',
-    SAVE_DRAFT: '/messages/draft',
-    SHOW: (id: number | string) => `/messages/${id}`,
-    MARK_READ: (id: number | string) => `/messages/${id}/read`,
-    TOGGLE_IMPORTANT: (id: number | string) => `/messages/${id}/important`,
-    DELETE: (id: number | string) => `/messages/${id}`,
+    INBOX: '/dashboard/messages/inbox',
+    SENT: '/dashboard/messages/sent',
+    DRAFTS: '/dashboard/messages/drafts',
+    SEND: '/dashboard/messages/send',
+    SAVE_DRAFT: '/dashboard/messages/draft',
+    SHOW: (id: number | string) => `/dashboard/messages/${id}`,
+    MARK_READ: (id: number | string) => `/dashboard/messages/${id}/read`,
+    TOGGLE_IMPORTANT: (id: number | string) => `/dashboard/messages/${id}/important`,
+    DELETE: (id: number | string) => `/dashboard/messages/${id}`,
   },
 
   // ========== NOTIFICATIONS ==========
@@ -170,17 +179,17 @@ export const API_ENDPOINTS = {
 
   // ========== SECURITY LOGS ==========
   SECURITY: {
-    OVERVIEW: '/security/overview',
-    LOGS: '/security/logs',
-    ANALYTICS: '/security/analytics',
-    RESOLVE: (id: number | string) => `/security/logs/${id}/resolve`,
-    DELETE_LOG: (id: number | string) => `/security/logs/${id}`,
-    DELETE_ALL: '/security/logs',
-    IP_DETAILS: (ip: string) => `/security/ip/${ip}`,
-    BLOCK_IP: '/security/ip/block',
-    UNBLOCK_IP: '/security/ip/unblock',
-    TRUST_IP: '/security/ip/trust',
-    UNTRUST_IP: '/security/ip/untrust',
+    OVERVIEW: '/dashboard/security/overview',
+    LOGS: '/dashboard/security/logs',
+    ANALYTICS: '/dashboard/security/analytics',
+    RESOLVE: (id: number | string) => `/dashboard/security/logs/${id}/resolve`,
+    DELETE_LOG: (id: number | string) => `/dashboard/security/logs/${id}`,
+    DELETE_ALL: '/dashboard/security/logs',
+    IP_DETAILS: (ip: string) => `/dashboard/security/ip/${ip}`,
+    BLOCK_IP: '/dashboard/security/ip/block',
+    UNBLOCK_IP: '/dashboard/security/ip/unblock',
+    TRUST_IP: '/dashboard/security/ip/trust',
+    UNTRUST_IP: '/dashboard/security/ip/untrust',
   },
 
   // ========== SETTINGS ==========
@@ -203,9 +212,21 @@ export const API_ENDPOINTS = {
 
   // ========== FILTER ==========
   FILTER: {
-    INDEX: '/filter',
-    SUBJECTS_BY_CLASS: (classId: number | string) => `/filter/subjects/${classId}`,
-    SEMESTERS_BY_SUBJECT: (subjectId: number | string) => `/filter/semesters/${subjectId}`,
-    FILE_TYPES: (semesterId: number | string) => `/filter/file-types/${semesterId}`,
+    INDEX: '/dashboard/filter',
+    SUBJECTS_BY_CLASS: (classId: number | string) => `/dashboard/filter/subjects/${classId}`,
+    SEMESTERS_BY_SUBJECT: (subjectId: number | string) => `/dashboard/filter/semesters/${subjectId}`,
+    FILE_TYPES: (semesterId: number | string) => `/dashboard/filter/file-types/${semesterId}`,
+  },
+
+  // ========== UPLOAD ==========
+  UPLOAD: {
+    IMAGE: '/upload/image',
+    FILE: '/upload/file',
+  },
+  
+  // ========== SECURE (requires auth) ==========
+  SECURE: {
+    UPLOAD_IMAGE: '/dashboard/secure/upload-image',
+    UPLOAD_DOCUMENT: '/dashboard/secure/upload-document',
   },
 };

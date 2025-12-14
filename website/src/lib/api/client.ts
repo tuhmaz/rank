@@ -19,6 +19,9 @@ class ApiClient {
 
   constructor() {
     this.baseUrl = API_CONFIG.BASE_URL;
+    if (!/^https?:\/\//i.test(this.baseUrl)) {
+      this.baseUrl = 'http://localhost:8000/api';
+    }
     if (typeof window !== 'undefined') {
       this.token = localStorage.getItem('token');
     }
@@ -78,14 +81,25 @@ class ApiClient {
         headers,
       });
 
-      const data = await response.json();
+      let data: any;
+      try {
+        data = await response.json();
+      } catch {
+        data = null;
+      }
 
       if (!response.ok) {
-        throw {
-          status: response.status,
-          message: data.message || 'حدث خطأ ما',
-          errors: data.errors,
-        };
+        if (response.status === 401) {
+          this.setToken(null);
+          if (typeof window !== 'undefined') {
+            const ret = window.location.pathname + window.location.search;
+            window.location.href = `/login?return=${encodeURIComponent(ret)}`;
+          }
+        }
+        const err = new Error((data && data.message) || 'حدث خطأ ما');
+        (err as any).status = response.status;
+        (err as any).errors = data ? data.errors : null;
+        throw err;
       }
 
       return {
@@ -94,14 +108,13 @@ class ApiClient {
         success: true,
       };
     } catch (error: any) {
-      if (error.status) {
-        throw error;
+      if (error && (error as any).status) {
+        throw error as any;
       }
-      throw {
-        status: 500,
-        message: 'خطأ في الاتصال بالخادم',
-        errors: null,
-      };
+      const err = new Error('خطأ في الاتصال بالخادم');
+      (err as any).status = 500;
+      (err as any).errors = null;
+      throw err;
     }
   }
 
@@ -147,20 +160,64 @@ class ApiClient {
       (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(url, {
+    let response = await fetch(url, {
       method: 'POST',
       headers,
       body: formData,
     });
 
-    const data = await response.json();
+    let data: any = null;
+    try {
+      data = await response.json();
+    } catch {}
 
     if (!response.ok) {
-      throw {
-        status: response.status,
-        message: data.message || 'حدث خطأ ما',
-        errors: data.errors,
-      };
+      if (response.status === 401) {
+        this.setToken(null);
+        if (typeof window !== 'undefined') {
+          const ret = window.location.pathname + window.location.search;
+          window.location.href = `/login?return=${encodeURIComponent(ret)}`;
+        }
+      }
+      if (response.status === 404 && this.baseUrl.endsWith('/api')) {
+        const altBase = this.baseUrl.slice(0, -4);
+        const altUrl = new URL(`${altBase}${endpoint}`).toString();
+        response = await fetch(altUrl, {
+          method: 'POST',
+          headers,
+          body: formData,
+        });
+        try {
+          data = await response.json();
+        } catch {
+          data = null;
+        }
+        if (!response.ok) {
+          if (response.status === 401) {
+            this.setToken(null);
+            if (typeof window !== 'undefined') {
+              const ret = window.location.pathname + window.location.search;
+              window.location.href = `/login?return=${encodeURIComponent(ret)}`;
+            }
+          }
+          const err = new Error((data && data.message) || 'حدث خطأ ما');
+          (err as any).status = response.status;
+          (err as any).errors = data ? data.errors : null;
+          throw err;
+        }
+      } else {
+        if (response.status === 401) {
+          this.setToken(null);
+          if (typeof window !== 'undefined') {
+            const ret = window.location.pathname + window.location.search;
+            window.location.href = `/login?return=${encodeURIComponent(ret)}`;
+          }
+        }
+        const err = new Error((data && data.message) || 'حدث خطأ ما');
+        (err as any).status = response.status;
+        (err as any).errors = data ? data.errors : null;
+        throw err;
+      }
     }
 
     return {

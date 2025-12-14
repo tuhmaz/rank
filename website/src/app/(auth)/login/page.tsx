@@ -8,12 +8,14 @@ import { Mail, Lock, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { useAuthStore } from '@/store/useStore';
+import { authService } from '@/lib/api/services';
 
 export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [serverError, setServerError] = useState<string>('');
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -23,19 +25,29 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
-    // محاكاة تسجيل الدخول
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-
-    login({
-      id: '1',
-      name: 'أحمد محمد',
-      email: formData.email,
-      role: 'admin',
-    });
-
-    setIsLoading(false);
-    router.push('/dashboard');
+    setServerError('');
+    try {
+      const res = await authService.login({
+        email: formData.email,
+        password: formData.password,
+      });
+      login({
+        id: String(res.user.id),
+        name: res.user.name,
+        email: res.user.email,
+        role: res.user.roles?.[0]?.name || 'user',
+        avatar: res.user.profile_photo_path,
+      });
+      router.push('/dashboard');
+    } catch (err: unknown) {
+      const message =
+        typeof err === 'object' && err && 'message' in err
+          ? String((err as { message?: string }).message)
+          : 'فشل تسجيل الدخول، يرجى المحاولة لاحقاً';
+      setServerError(message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -60,6 +72,11 @@ export default function LoginPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        {serverError && (
+          <div className="p-3 rounded-lg bg-error/10 text-error text-sm">
+            {serverError}
+          </div>
+        )}
         <Input
           label="البريد الإلكتروني"
           type="email"

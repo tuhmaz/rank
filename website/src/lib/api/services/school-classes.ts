@@ -17,7 +17,7 @@ export const schoolClassesService = {
       API_ENDPOINTS.SCHOOL_CLASSES.LIST,
       { country_id }
     );
-    return response.data;
+    return (response.data as any).data ?? (response.data as any);
   },
 
   /**
@@ -28,7 +28,7 @@ export const schoolClassesService = {
       API_ENDPOINTS.SCHOOL_CLASSES.SHOW(id),
       { country_id }
     );
-    return response.data;
+    return (response.data as any).data ?? (response.data as any);
   },
 
   /**
@@ -39,7 +39,7 @@ export const schoolClassesService = {
       API_ENDPOINTS.SCHOOL_CLASSES.STORE,
       data
     );
-    return response.data;
+    return (response.data as any).data ?? (response.data as any);
   },
 
   /**
@@ -50,7 +50,7 @@ export const schoolClassesService = {
       API_ENDPOINTS.SCHOOL_CLASSES.UPDATE(id),
       data
     );
-    return response.data;
+    return (response.data as any).data ?? (response.data as any);
   },
 
   /**

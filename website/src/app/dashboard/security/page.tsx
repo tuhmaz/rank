@@ -137,7 +137,7 @@ export default function SecurityPage() {
       await securityService.resolveLog(resolveModal.log.id, resolveNotes);
       setResolveModal({ open: false, log: null });
       setResolveNotes('');
-      fetchLogs(pagination.current_page);
+      fetchLogs(pagination?.current_page ?? 1);
       fetchOverview();
     } catch (err) {
       console.error('Failed to resolve log:', err);
@@ -162,7 +162,7 @@ export default function SecurityPage() {
     try {
       setActionLoading(id);
       await securityService.deleteLog(id);
-      fetchLogs(pagination.current_page);
+      fetchLogs(pagination?.current_page ?? 1);
       fetchOverview();
     } catch (err) {
       console.error('Failed to delete log:', err);
@@ -272,7 +272,7 @@ export default function SecurityPage() {
     },
   ];
 
-  const unresolvedCount = overview?.stats.unresolved_events || 0;
+  const unresolvedCount = overview?.stats?.unresolved_events ?? 0;
 
   return (
     <div className="space-y-6">
@@ -306,7 +306,7 @@ export default function SecurityPage() {
                 <div>
                   <p className="text-sm text-muted-foreground">إجمالي السجلات</p>
                   <p className="text-2xl font-bold">
-                    {(overview?.stats.total_events || 0).toLocaleString('ar-SA')}
+                    {(overview?.stats?.total_events ?? 0).toLocaleString('ar-SA')}
                   </p>
                 </div>
               </div>
@@ -340,7 +340,7 @@ export default function SecurityPage() {
                 <div>
                   <p className="text-sm text-muted-foreground">عالي الخطورة</p>
                   <p className="text-2xl font-bold text-error">
-                    {overview?.stats.high_risk_events || 0}
+                    {overview?.stats?.high_risk_events ?? 0}
                   </p>
                 </div>
               </div>
@@ -357,7 +357,7 @@ export default function SecurityPage() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">IPs محظورة</p>
-                  <p className="text-2xl font-bold">{overview?.stats.blocked_ips || 0}</p>
+                  <p className="text-2xl font-bold">{overview?.stats?.blocked_ips ?? 0}</p>
                 </div>
               </div>
             </CardContent>
