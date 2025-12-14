@@ -15,16 +15,50 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-  X,
+  ChevronDown,
+  FolderTree,
+  GraduationCap,
+  BookMarked,
+  Calendar,
+  Shield,
+  Mail,
+  Newspaper,
+  File,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSidebarStore, useAuthStore } from '@/store/useStore';
 
-const menuItems = [
+interface MenuItem {
+  title: string;
+  icon: any;
+  href?: string;
+  children?: { title: string; href: string }[];
+}
+
+const menuItems: MenuItem[] = [
   {
     title: 'لوحة التحكم',
     icon: LayoutDashboard,
     href: '/dashboard',
+  },
+  {
+    title: 'المحتوى',
+    icon: Newspaper,
+    children: [
+      { title: 'المقالات', href: '/dashboard/articles' },
+      { title: 'الفئات', href: '/dashboard/categories' },
+      { title: 'المنشورات', href: '/dashboard/posts' },
+      { title: 'الملفات', href: '/dashboard/files' },
+    ],
+  },
+  {
+    title: 'التعليم',
+    icon: GraduationCap,
+    children: [
+      { title: 'الصفوف الدراسية', href: '/dashboard/school-classes' },
+      { title: 'المواد', href: '/dashboard/subjects' },
+      { title: 'الفصول', href: '/dashboard/semesters' },
+    ],
   },
   {
     title: 'المستخدمين',
@@ -32,19 +66,37 @@ const menuItems = [
     href: '/dashboard/users',
   },
   {
+    title: 'الصلاحيات',
+    icon: Shield,
+    children: [
+      { title: 'الأدوار', href: '/dashboard/roles' },
+      { title: 'الصلاحيات', href: '/dashboard/permissions' },
+    ],
+  },
+  {
+    title: 'الأمان',
+    icon: Shield,
+    href: '/dashboard/security',
+  },
+  {
     title: 'التحليلات',
     icon: BarChart3,
     href: '/dashboard/analytics',
   },
   {
-    title: 'التقارير',
-    icon: FileText,
-    href: '/dashboard/reports',
+    title: 'الرسائل',
+    icon: Mail,
+    href: '/dashboard/messages',
   },
   {
     title: 'الإشعارات',
     icon: Bell,
     href: '/dashboard/notifications',
+  },
+  {
+    title: 'التقويم',
+    icon: Calendar,
+    href: '/dashboard/calendar',
   },
   {
     title: 'الإعدادات',
@@ -65,6 +117,23 @@ export default function Sidebar() {
   const pathname = usePathname();
   const { isOpen, toggleSidebar, setSidebar } = useSidebarStore();
   const { logout, user } = useAuthStore();
+  const [expandedItems, setExpandedItems] = useState<string[]>([]);
+
+  const toggleExpand = (title: string) => {
+    setExpandedItems((prev) =>
+      prev.includes(title) ? prev.filter((t) => t !== title) : [...prev, title]
+    );
+  };
+
+  const isItemActive = (item: MenuItem): boolean => {
+    if (item.href) {
+      return pathname === item.href;
+    }
+    if (item.children) {
+      return item.children.some((child) => pathname === child.href);
+    }
+    return false;
+  };
 
   return (
     <>
@@ -146,13 +215,82 @@ export default function Sidebar() {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {menuItems.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive = isItemActive(item);
+            const isExpanded = expandedItems.includes(item.title);
+            const hasChildren = item.children && item.children.length > 0;
+
+            if (hasChildren) {
+              return (
+                <div key={item.title}>
+                  <button
+                    onClick={() => toggleExpand(item.title)}
+                    className={cn(
+                      'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group relative',
+                      isActive
+                        ? 'bg-primary/10 text-primary'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    )}
+                  >
+                    <item.icon className="w-5 h-5 shrink-0" />
+                    <AnimatePresence mode="wait">
+                      {isOpen && (
+                        <motion.span
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          className="text-sm font-medium flex-1 text-right"
+                        >
+                          {item.title}
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                    {isOpen && (
+                      <ChevronDown
+                        className={cn(
+                          'w-4 h-4 transition-transform',
+                          isExpanded && 'rotate-180'
+                        )}
+                      />
+                    )}
+                  </button>
+
+                  <AnimatePresence>
+                    {isOpen && isExpanded && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="pr-8 mt-1 space-y-1">
+                          {item.children?.map((child) => (
+                            <Link
+                              key={child.href}
+                              href={child.href}
+                              className={cn(
+                                'block px-3 py-2 rounded-lg text-sm transition-colors',
+                                pathname === child.href
+                                  ? 'bg-primary text-white'
+                                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                              )}
+                            >
+                              {child.title}
+                            </Link>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              );
+            }
+
             return (
               <Link
                 key={item.href}
-                href={item.href}
+                href={item.href!}
                 className={cn(
                   'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group relative',
                   isActive
