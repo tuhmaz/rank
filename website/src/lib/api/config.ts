@@ -229,4 +229,11 @@ export const API_ENDPOINTS = {
     UPLOAD_IMAGE: '/dashboard/secure/upload-image',
     UPLOAD_DOCUMENT: '/dashboard/secure/upload-document',
   },
+
+  // ========== SITEMAP ==========
+  SITEMAP: {
+    STATUS: '/sitemap/status',
+    GENERATE_ALL: '/sitemap/generate',
+    DELETE: (type: string, database: string) => `/sitemap/${type}/${database}`,
+  },
 };
