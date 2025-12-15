@@ -38,6 +38,16 @@ export const API_ENDPOINTS = {
     EVENT: (id: number | string) => `/home/event/${id}`,
   },
 
+  // ========== FRONTEND ==========
+  FRONTEND: {
+    CLASSES: '/school-classes',
+    CLASS_DETAILS: (id: number | string) => `/school-classes/${id}`,
+    SUBJECTS_BY_CLASS: (classId: number | string) => `/filter/subjects/${classId}`,
+    SEMESTERS_BY_SUBJECT: (subjectId: number | string) => `/filter/semesters/${subjectId}`,
+    FILE_TYPES: (semesterId: number | string) => `/filter/file-types/${semesterId}`,
+    FILTER: '/filter',
+  },
+
   // ========== DASHBOARD ==========
   DASHBOARD: {
     INDEX: '/dashboard',

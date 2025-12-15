@@ -11,6 +11,7 @@ import Button from '@/components/ui/Button';
 
 const navItems = [
   { title: 'الرئيسية', href: '/' },
+  { title: 'الصفوف الدراسية', href: '/classes' },
   { title: 'من نحن', href: '/about' },
   { title: 'الخدمات', href: '/services' },
   { title: 'اتصل بنا', href: '/contact' },
